@@ -9,6 +9,8 @@ The app has no external npm dependencies.
 - `app.js`: demo HTTP server
 - `package.json`: Node project metadata and scripts
 - `devops-demo-node.service`: sample `systemd` unit file
+- `Dockerfile`: container image for running without Node.js installed on the host
+- `devops-demo-node-docker.service`: sample `systemd` unit file that runs the Docker container
 
 ## Run Locally
 
@@ -24,6 +26,8 @@ curl http://localhost:3000/health
 ```
 
 ## Install as a Systemd Service on Ubuntu
+
+Use this section only when Node.js is installed directly on the Ubuntu host.
 
 These commands assume the repository is copied to `/opt/learn-devops`.
 
@@ -152,4 +156,98 @@ sudo systemctl disable devops-demo-node
 systemctl status devops-demo-node
 journalctl -u devops-demo-node -f
 sudo ss -tulpn | grep ":3000"
+```
+
+## Run with Docker
+
+Use this when the Ubuntu server has Docker but does not have Node.js installed.
+
+Build the image:
+
+```bash
+cd ~/learn-devops/server
+docker build -t devops-demo-node:latest .
+```
+
+Run the container:
+
+```bash
+docker run --name devops-demo-node --rm -p 3000:3000 devops-demo-node:latest
+```
+
+Test the app from another terminal:
+
+```bash
+curl http://localhost:3000/health
+```
+
+Read container logs:
+
+```bash
+docker logs devops-demo-node
+docker logs -f devops-demo-node
+```
+
+Practice a crash:
+
+```bash
+curl http://localhost:3000/crash
+docker ps -a
+docker logs devops-demo-node
+```
+
+## Run Docker Container with Systemd
+
+This is useful for learning both Docker and `systemd`.
+
+These commands assume the repository is cloned at `~/learn-devops`.
+
+Copy the repo to `/opt`:
+
+```bash
+sudo mkdir -p /opt/learn-devops
+sudo cp -R ~/learn-devops/* /opt/learn-devops/
+```
+
+Build the Docker image:
+
+```bash
+cd /opt/learn-devops/server
+sudo docker build -t devops-demo-node:latest .
+```
+
+Install the Docker-based service:
+
+```bash
+sudo cp /opt/learn-devops/server/devops-demo-node-docker.service /etc/systemd/system/devops-demo-node-docker.service
+sudo systemctl daemon-reload
+sudo systemctl start devops-demo-node-docker
+sudo systemctl enable devops-demo-node-docker
+```
+
+Check service status:
+
+```bash
+systemctl status devops-demo-node-docker
+```
+
+Read service logs from journald:
+
+```bash
+journalctl -u devops-demo-node-docker -n 100
+journalctl -u devops-demo-node-docker -f
+```
+
+Test the app:
+
+```bash
+curl http://localhost:3000/health
+```
+
+Practice service failure:
+
+```bash
+curl http://localhost:3000/crash
+systemctl status devops-demo-node-docker
+journalctl -u devops-demo-node-docker -n 100
 ```

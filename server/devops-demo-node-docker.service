@@ -1,0 +1,23 @@
+[Unit]
+Description=DevOps Demo Node.js Docker Service
+Documentation=file:/opt/learn-devops/server/README.md
+Requires=docker.service
+After=docker.service network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/learn-devops/server
+
+ExecStartPre=-/usr/bin/docker rm -f devops-demo-node
+ExecStart=/usr/bin/docker run --name devops-demo-node --rm -p 3000:3000 -e NODE_ENV=production -e HOST=0.0.0.0 -e PORT=3000 -e FAIL_ON_START=false devops-demo-node:latest
+ExecStop=/usr/bin/docker stop devops-demo-node
+
+Restart=on-failure
+RestartSec=5
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=devops-demo-node-docker
+
+[Install]
+WantedBy=multi-user.target
