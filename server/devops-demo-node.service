@@ -1,0 +1,26 @@
+[Unit]
+Description=DevOps Demo Node.js Service
+Documentation=file:/opt/learn-devops/server/README.md
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/learn-devops/server
+ExecStart=/usr/bin/node /opt/learn-devops/server/app.js
+Restart=on-failure
+RestartSec=5
+
+Environment=NODE_ENV=production
+Environment=HOST=0.0.0.0
+Environment=PORT=3000
+Environment=FAIL_ON_START=false
+
+User=ubuntu
+Group=ubuntu
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=devops-demo-node
+
+[Install]
+WantedBy=multi-user.target

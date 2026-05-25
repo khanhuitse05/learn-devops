@@ -1,0 +1,14 @@
+{
+  "name": "devops-demo-node-service",
+  "version": "1.0.0",
+  "description": "Small Node.js app for learning systemd service management and logs.",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "check": "node --check app.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "MIT"
+}
