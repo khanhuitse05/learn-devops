@@ -23,7 +23,98 @@ In another terminal:
 ```bash
 curl http://localhost:3000/
 curl http://localhost:3000/health
+curl http://localhost:3000/flow
+curl http://localhost:3000/api/demo-order
 ```
+
+## M1 Demo: Typical Production Flow
+
+Use these endpoints while studying M1 networking.
+
+Production idea:
+
+```text
+Mobile app / browser
+  -> DNS resolves domain
+  -> HTTPS connection starts on port 443
+  -> TLS certificate is checked
+  -> ALB or API Gateway receives request
+  -> ECS service receives request
+  -> app talks to RDS / Redis / EFS
+  -> response goes back through the same path
+```
+
+This local app cannot create real DNS, TLS, ALB, ECS, RDS, Redis, or EFS by
+itself. Instead, it shows the same flow with local HTTP plus demo headers.
+
+Start the server:
+
+```bash
+node app.js
+```
+
+Show the request flow:
+
+```bash
+curl -i http://localhost:3000/flow
+```
+
+Simulate an ALB forwarding an HTTPS request to ECS:
+
+```bash
+curl -i \
+  -H "Host: api.demo.local" \
+  -H "X-Forwarded-Proto: https" \
+  -H "X-Forwarded-For: 203.0.113.10" \
+  -H "X-Demo-Entry-Layer: AWS ALB" \
+  -H "X-Amzn-Trace-Id: Root=1-demo-trace" \
+  http://localhost:3000/flow
+```
+
+Demo the app talking to dependencies:
+
+```bash
+curl -i http://localhost:3000/api/demo-order
+```
+
+The response shows simulated connections to:
+
+- `RDS` on port `5432`
+- `Redis` on port `6379`
+- `EFS` on port `2049`
+
+Practice a dependency failure:
+
+```bash
+DEMO_RDS_STATUS=down node app.js
+```
+
+In another terminal:
+
+```bash
+curl -i http://localhost:3000/api/demo-order
+```
+
+You should see HTTP `503`, which means the app is reachable but cannot finish
+the request because a dependency is unhealthy.
+
+Other failure simulations:
+
+```bash
+DEMO_REDIS_STATUS=down node app.js
+DEMO_EFS_STATUS=down node app.js
+```
+
+Useful lesson mapping:
+
+| Flow step | Local demo signal |
+| --- | --- |
+| DNS resolves domain | `Host` header in `/flow` |
+| HTTPS and TLS | `X-Forwarded-Proto: https` |
+| ALB/API Gateway | `X-Demo-Entry-Layer: AWS ALB` |
+| ECS service | `ECS_SERVICE_NAME` and `ECS_TASK_ID` env vars |
+| RDS/Redis/EFS | `/api/demo-order` dependencies |
+| Response path | HTTP response from `curl -i` |
 
 ## Install as a Systemd Service on Ubuntu
 
