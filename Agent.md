@@ -46,13 +46,13 @@ Legend:
 - `[~]`: learning now
 - `[x]`: done
 
-Current focus: M1
+Current focus: M4
 
 - `[x]` M0: Linux, Terminal, Git, and server operations mindset.
-- `[~]` M1: Networking, HTTP, DNS, and TLS.
+- `[ ]` M1: Networking, HTTP, DNS, and TLS. (paused)
 - `[ ]` M2: Docker and containerization.
 - `[ ]` M3: AWS account, AWS CLI, and IAM.
-- `[ ]` M4: VPC, Subnet, Security Group, NAT Gateway, and EC2.
+- `[~]` M4: VPC, Subnet, Security Group, NAT Gateway, and EC2.
 - `[ ]` M5: Entry layer: ALB, ACM, Route 53, and API Gateway.
 - `[ ]` M6: Amazon ECR image registry.
 - `[ ]` M7: Amazon ECS/Fargate: cluster, task definition, and service.
@@ -65,7 +65,7 @@ Current focus: M1
 - `[ ]` M14: Security, secrets, encryption, backup/DR, and cost optimization.
 - `[ ]` M15: Capstone project: build a mini architecture similar to the roadmap diagram.
 
-Next learning target: M2 after M1 is complete.
+Next learning target: Continue M4 hands-on VPC practice.
 
 When I ask for help, check this section first. If I complete a topic, update
 this checklist and suggest the next practical exercise.
