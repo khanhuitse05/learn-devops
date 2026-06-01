@@ -24,6 +24,8 @@ RDS tốn phí khi instance còn tồn tại, kể cả không có request. Khô
 
 ## Các bước làm bằng Console
 
+Làm theo hướng dẫn chi tiết: [Tạo RDS PostgreSQL bằng AWS Console](more/create-database-console.md).
+
 1. Vào RDS Console.
 2. Chọn Create database.
 3. Engine: PostgreSQL.
@@ -45,11 +47,20 @@ RDS tốn phí khi instance còn tồn tại, kể cả không có request. Khô
 
 ## Lệnh CLI kiểm tra/debug
 
+Đặt `DB_ID` theo DB instance identifier đã nhập khi tạo RDS. Nếu dùng đúng tên gợi ý của lab:
+
+```bash
+DB_ID=learn-devops-demo-postgres
+DB_NAME=devops_demo
+DB_USERNAME=devops_demo
+DB_PASSWORD=YOUR_PASSWORD
+```
+
 Xem trạng thái RDS:
 
 ```bash
 aws rds describe-db-instances \
-  --db-instance-identifier learn-devops-demo-postgres \
+  --db-instance-identifier "$DB_ID" \
   --query 'DBInstances[0].{Status:DBInstanceStatus,Endpoint:Endpoint.Address,Port:Endpoint.Port,Public:PubliclyAccessible}' \
   --output table
 ```
@@ -58,24 +69,36 @@ Lấy endpoint:
 
 ```bash
 RDS_ENDPOINT=$(aws rds describe-db-instances \
-  --db-instance-identifier learn-devops-demo-postgres \
+  --db-instance-identifier "$DB_ID" \
   --query 'DBInstances[0].Endpoint.Address' \
   --output text)
 
 echo "$RDS_ENDPOINT"
 ```
 
+### Lưu ý khi verify RDS private
+
+Lab này đặt `PubliclyAccessible=false`, nên RDS không có public IP và chỉ nhận kết nối từ resource có đường mạng phù hợp vào VPC. Từ máy local, endpoint private có thể không resolve DNS hoặc không thể kết nối đến port `5432`.
+
+Có thể verify cơ bản ngay trên RDS Console:
+
+- Status là `Available`.
+- `Publicly accessible` là `No`.
+- VPC, Security Group và endpoint đúng với cấu hình của lab.
+
+Để chạy lệnh SQL, dùng EC2 test host, ECS task, CloudShell VPC environment, VPN hoặc bastion/SSM phù hợp. Không bật public access chỉ để debug.
+
 Từ EC2 test host hoặc ECS task trong cùng VPC:
 
 ```bash
-psql "host=$RDS_ENDPOINT port=5432 dbname=devops_demo user=devops_demo password=YOUR_PASSWORD sslmode=require" \
+psql "host=$RDS_ENDPOINT port=5432 dbname=$DB_NAME user=$DB_USERNAME password=$DB_PASSWORD sslmode=require" \
   -c "select now();"
 ```
 
 Tạo schema demo từ host có `psql`:
 
 ```bash
-psql "host=$RDS_ENDPOINT port=5432 dbname=devops_demo user=devops_demo password=YOUR_PASSWORD sslmode=require" \
+psql "host=$RDS_ENDPOINT port=5432 dbname=$DB_NAME user=$DB_USERNAME password=$DB_PASSWORD sslmode=require" \
   -f server/schema.sql
 ```
 
@@ -94,7 +117,7 @@ psql "host=$RDS_ENDPOINT port=5432 dbname=devops_demo user=devops_demo password=
 
 ```bash
 aws rds delete-db-instance \
-  --db-instance-identifier learn-devops-demo-postgres \
+  --db-instance-identifier "$DB_ID" \
   --skip-final-snapshot \
   --delete-automated-backups
 ```
@@ -103,12 +126,12 @@ Kiểm tra đến khi DB biến mất:
 
 ```bash
 aws rds describe-db-instances \
-  --db-instance-identifier learn-devops-demo-postgres
+  --db-instance-identifier "$DB_ID"
 ```
 
 ## Troubleshooting
 
+- `could not translate host name ... to address`: kiểm tra RDS đã có status `available` chưa và lấy lại endpoint bằng lệnh CLI phía trên. Endpoint có thể chưa dùng được khi instance còn đang `creating`.
 - Timeout khi connect: RDS SG chưa cho phép source SG, hoặc client không ở cùng VPC/private route.
-- `PubliclyAccessible=false` nên máy local không connect trực tiếp được. Dùng ECS task, EC2 test host, VPN hoặc bastion/SSM.
 - Auth fail: kiểm tra username, password, database name.
 - SSL issue: thử thêm `sslmode=require`.
