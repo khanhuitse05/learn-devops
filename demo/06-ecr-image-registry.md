@@ -25,11 +25,24 @@ ECR có thể phát sinh phí storage nếu giữ nhiều image. Tạo lifecycle
 ## Các bước làm bằng Console
 
 1. Vào ECR Console.
-2. Create repository.
-3. Repository name: `learn-devops-demo-node`.
-4. Visibility: Private.
-5. Image scan: bật nếu muốn học security scan.
-6. Tag immutability: optional cho lab; production nên cân nhắc bật.
+2. Chọn region `ap-southeast-1` hoặc region đang dùng cho lab.
+3. Trong menu **Private registry**, chọn **Repositories**.
+4. Chọn **Create repository**.
+5. Trong **General settings**, nhập Repository name: `learn-devops-demo-node`.
+6. Trong **Image tag settings**, chọn **Mutable** để đơn giản cho lab. Để trống **Mutable tag exclusions**.
+
+- `Mutable`: cho phép push lại cùng một tag.
+- Production nên cân nhắc **Immutable** để tránh ghi đè image đã deploy.
+
+7. Trong **Encryption settings**, chọn **AES-256**. Lab không cần dùng **AWS KMS** vì KMS có thể phát sinh thêm phí.
+2. Trong **Image scanning settings - deprecated**, có thể giữ mặc định. Cấu hình scan mới nên thực hiện ở registry level.
+3. Chọn **Create**.
+
+Nếu muốn bật scan khi push image:
+
+1. Trong menu **Private registry**, chọn **Scanning**.
+2. Chọn **Basic scanning**.
+3. Thêm **Scan on push filter** cho repository `learn-devops-demo-node` hoặc áp dụng cho toàn bộ repository.
 
 ## Lệnh CLI kiểm tra/debug
 
@@ -37,8 +50,7 @@ Tạo repo bằng CLI nếu chưa tạo Console:
 
 ```bash
 aws ecr create-repository \
-  --repository-name learn-devops-demo-node \
-  --image-scanning-configuration scanOnPush=true
+  --repository-name learn-devops-demo-node
 ```
 
 Login ECR:
