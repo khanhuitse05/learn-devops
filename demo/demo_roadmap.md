@@ -24,11 +24,11 @@ aws sts get-caller-identity
 | Step | File | AWS service | Mục tiêu | Output cần đạt | Chi phí ước lượng | Cảnh báo |
 | --- | --- | --- | --- | --- | --- | --- |
 | 0 | [00-prerequisites.md](00-prerequisites.md) | IAM, Billing, AWS CLI | Chuẩn bị account an toàn | MFA, budget, CLI profile OK | Thường miễn phí | Bắt buộc bật cảnh báo chi phí |
-| 1 | [01-local-server-baseline.md](01-local-server-baseline.md) | Local only | Hiểu app hiện có | `/health`, `/flow`, `/api/demo-order` chạy được | Miễn phí | Không dùng AWS |
-| 2 | [02-postgresql-local.md](02-postgresql-local.md) | Local PostgreSQL | Chuẩn bị app cho RDS | Schema orders, DB health, query test | Miễn phí nếu chạy local | Chưa tạo RDS |
-| 3 | [03-docker-compose-app-postgres.md](03-docker-compose-app-postgres.md) | Local Docker | Chạy app + Postgres giống môi trường deploy | Compose up, app kết nối DB | Miễn phí local | Xóa volume nếu muốn reset DB |
+| 1 | [01-local-server-baseline.md](01-local-server-baseline.md) | Local only | Smoke test server hoàn chỉnh | App health OK, DB health fail độc lập khi chưa có DB | Miễn phí | Không dùng AWS |
+| 2 | [02-postgresql-local.md](02-postgresql-local.md) | Local PostgreSQL | Kết nối server có sẵn với DB local | Schema orders, DB health, query test | Miễn phí nếu chạy local | Chưa tạo RDS |
+| 3 | [03-docker-compose-app-postgres.md](03-docker-compose-app-postgres.md) | Local Docker | Chạy stack Compose có sẵn | Compose up, auto-init schema, app kết nối DB | Miễn phí local | Xóa volume nếu muốn reset DB |
 | 4 | [04-vpc-network.md](04-vpc-network.md) | VPC, Subnet, SG | Tạo network tối giản | VPC, public/private subnet, SG | VPC/SG miễn phí; NAT tốn phí | Tránh NAT Gateway nếu chưa cần |
-| 5 | [05-rds-postgresql.md](05-rds-postgresql.md) | RDS PostgreSQL | Demo database managed | RDS private, app/test host kết nối được | Có thể free tier, ngoài free tier sẽ tốn tiền | Không public RDS |
+| 5 | [05-rds-postgresql.md](05-rds-postgresql.md) | RDS PostgreSQL | Demo database managed | RDS private, test host kết nối được, schema sẵn sàng | Có thể free tier, ngoài free tier sẽ tốn tiền | Không public RDS |
 | 6 | [06-ecr-image-registry.md](06-ecr-image-registry.md) | ECR | Push Docker image | Image có tag trong ECR | Storage nhỏ thường thấp | Xóa repo/images sau lab |
 | 7 | [07-ecs-fargate-service.md](07-ecs-fargate-service.md) | ECS/Fargate | Chạy container app | ECS task/service healthy | Fargate tính phí theo vCPU/RAM/giờ | Stop/delete service sau lab |
 | 8 | [08-alb-public-entry.md](08-alb-public-entry.md) | ALB | Public HTTP entry vào ECS | ALB DNS gọi được `/health` | ALB tính phí theo giờ + LCU | Delete ALB sau lab |
@@ -44,22 +44,28 @@ aws sts get-caller-identity
 4. Làm step 9-10 để vận hành đúng hơn: secrets, logs, alarm.
 5. Làm step 11 ngay sau buổi thực hành để dừng chi phí.
 
-## Server Roadmap
+## Server hoàn chỉnh trước khi demo
 
-App hiện tại trong `./server` là Node.js thuần, chưa có dependency ngoài. Các endpoint đang có:
+`./server` đã là app hoàn chỉnh trước khi bắt đầu roadmap. Trong quá trình học chỉ thay đổi infrastructure, env vars và secret; không cần sửa source code server.
+
+Artifact đã có:
+
+- `app.js`: HTTP server, health check, flow demo và PostgreSQL endpoints.
+- `schema.sql`: schema và seed data idempotent.
+- `compose.yml`: app + PostgreSQL local, healthcheck và auto-init schema.
+- `Dockerfile`: image dùng lại cho local Docker, ECR và ECS.
+- `package.json` và `package-lock.json`: dependency `pg` đã được lock.
+
+Endpoint đã có:
 
 - `/health`: health check đơn giản.
 - `/flow`: mô phỏng request path mobile/browser -> DNS -> ALB/API Gateway -> ECS.
 - `/api/demo-order`: mô phỏng app gọi RDS/Redis/EFS bằng env var.
+- `/api/db/health`: chạy `select 1` với PostgreSQL thật.
+- `/api/orders` và `/api/orders/:id`: đọc/ghi bảng `orders`.
 - `/crash`: tạo lỗi để học systemd/log restart.
 
-Khi chuyển sang demo RDS thật, bổ sung code theo hướng:
-
-- Thêm dependency `pg`.
-- Hỗ trợ `DATABASE_URL`, hoặc `PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER`, `PGPASSWORD`.
-- Thêm endpoint `/api/db/health` để kiểm tra DB.
-- Thêm endpoint `/api/orders` và `/api/orders/:id` để đọc/ghi bảng `orders`.
-- Giữ `/health` không phụ thuộc DB để ALB/ECS health check không fail khi DB đang lỗi.
+Khi chuyển từ local PostgreSQL sang RDS, chỉ đổi `DATABASE_URL` hoặc các biến `PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER`, `PGPASSWORD`. `/health` luôn không phụ thuộc DB để ALB/ECS health check không fail khi DB đang lỗi.
 
 ## Acceptance Checklist
 
@@ -67,4 +73,5 @@ Khi chuyển sang demo RDS thật, bổ sung code theo hướng:
 - Các lab AWS đều có cảnh báo chi phí trước khi tạo resource.
 - Các lệnh dùng prefix `learn-devops-demo-*` để dễ cleanup.
 - RDS không mở public access.
+- Không có bước nào yêu cầu sửa source code server trong lúc thực hành.
 - Người học có thể đi theo thứ tự: local app -> PostgreSQL local -> Docker -> VPC/RDS -> ECR -> ECS -> ALB -> secrets/logs -> cleanup.

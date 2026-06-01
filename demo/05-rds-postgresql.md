@@ -2,7 +2,7 @@
 
 ## Mục tiêu
 
-Tạo Amazon RDS PostgreSQL private để app dùng database managed. Lab này nối tiếp sau khi app đã chạy được PostgreSQL local.
+Tạo Amazon RDS PostgreSQL private để server hoàn chỉnh dùng database managed. Lab này nối tiếp sau khi app đã chạy được PostgreSQL local; không cần sửa source code.
 
 ## Kiến thức cần hiểu
 
@@ -10,6 +10,7 @@ Tạo Amazon RDS PostgreSQL private để app dùng database managed. Lab này n
 - DB subnet group chọn private subnets.
 - Security Group kiểm soát ai được vào port 5432.
 - Backup, storage, instance class và Multi-AZ ảnh hưởng trực tiếp đến chi phí.
+- Cùng một app image dùng được PostgreSQL local và RDS; chỉ connection config thay đổi.
 
 ## Chi phí ước lượng
 
@@ -82,8 +83,9 @@ psql "host=$RDS_ENDPOINT port=5432 dbname=devops_demo user=devops_demo password=
 
 - RDS status là `available`.
 - `PubliclyAccessible` là `false`.
-- Kết nối PostgreSQL thành công từ ECS/task hoặc EC2 test trong cùng VPC.
-- App dùng RDS endpoint thay cho PostgreSQL local.
+- Kết nối PostgreSQL thành công từ EC2 test host hoặc client phù hợp trong cùng VPC.
+- Schema `orders` đã được tạo trên RDS.
+- Có RDS endpoint để inject vào ECS task qua `DATABASE_URL` ở step 09.
 
 ## Cleanup
 

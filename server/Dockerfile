@@ -7,7 +7,9 @@ ENV HOST=0.0.0.0
 ENV PORT=3000
 ENV FAIL_ON_START=false
 
-COPY package.json ./
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev
+
 COPY app.js ./
 
 EXPOSE 3000

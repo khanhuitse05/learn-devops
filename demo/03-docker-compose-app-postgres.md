@@ -10,6 +10,7 @@ Chạy app và PostgreSQL bằng Docker Compose để mô phỏng cách ECS task
 - App nên dùng env var, không hardcode host/password.
 - Container logs nên ghi ra stdout/stderr.
 - Volume giữ data PostgreSQL giữa các lần restart.
+- `server/compose.yml` đã chứa đầy đủ config; không cần sửa code hoặc tự tạo file trong lúc học.
 
 ## Chi phí ước lượng
 
@@ -23,45 +24,18 @@ Không dùng AWS ở bước này.
 
 Không dùng AWS Console trong bước này.
 
-## File cần bổ sung sau
+## File đã có sẵn
 
-Khi triển khai phần code, nên thêm `server/schema.sql` và `server/docker-compose.yml` hoặc `compose.yml` ở root repo.
-
-Compose gợi ý:
-
-```yaml
-services:
-  app:
-    build: .
-    environment:
-      PORT: "3000"
-      HOST: "0.0.0.0"
-      DATABASE_URL: postgres://devops_demo:devops_demo@postgres:5432/devops_demo
-    ports:
-      - "3000:3000"
-    depends_on:
-      - postgres
-
-  postgres:
-    image: postgres:16-alpine
-    environment:
-      POSTGRES_DB: devops_demo
-      POSTGRES_USER: devops_demo
-      POSTGRES_PASSWORD: devops_demo
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-
-volumes:
-  postgres_data:
-```
+- `server/compose.yml`: chạy app và PostgreSQL.
+- `server/schema.sql`: được PostgreSQL container apply tự động khi tạo data volume lần đầu.
+- PostgreSQL có healthcheck; app chỉ start sau khi DB healthy.
 
 ## Lệnh CLI kiểm tra/debug
 
 ```bash
 cd server
-docker compose up --build
+docker compose up --build -d
+docker compose ps
 ```
 
 Terminal khác:
@@ -95,7 +69,8 @@ nc -vz postgres 5432
 
 - `docker compose up --build` chạy app và PostgreSQL.
 - App gọi DB bằng host `postgres`.
-- `/health` và `/api/db/health` đều OK sau khi code DB được bổ sung.
+- Schema và seed data được tạo tự động trên volume mới.
+- `/health` và `/api/db/health` đều trả HTTP 200.
 
 ## Cleanup
 
@@ -112,6 +87,6 @@ docker compose down -v
 
 ## Troubleshooting
 
-- App start trước DB: thêm retry connection trong app hoặc chạy lại request sau vài giây.
+- App chưa start: chạy `docker compose ps` và `docker compose logs postgres` để kiểm tra PostgreSQL healthcheck.
 - `postgres` không resolve: kiểm tra service name trong compose.
 - DB data cũ gây lỗi schema: dùng `docker compose down -v` để reset trong môi trường local.

@@ -2,7 +2,7 @@
 
 ## Mục tiêu
 
-Chuẩn bị app để demo RDS bằng PostgreSQL thật. Bước này mô tả thay đổi cần bổ sung cho `./server` ở giai đoạn triển khai tiếp theo, trước khi tạo RDS trên AWS.
+Chạy PostgreSQL local để dùng các endpoint database đã có sẵn trong server. Bước này chỉ cấu hình runtime và tạo schema, không sửa source code.
 
 ## Kiến thức cần hiểu
 
@@ -23,15 +23,15 @@ Chưa tạo RDS ở bước này. Đừng tạo RDS trước khi app có thể k
 
 Không dùng AWS Console trong bước này.
 
-## Server change cần bổ sung sau
+## Server đã sẵn sàng
 
-Trong `./server/package.json`, thêm dependency:
+Các file cần thiết đã có trong `./server`:
 
-```bash
-npm install pg
-```
+- `app.js`: kết nối PostgreSQL và cung cấp endpoint database.
+- `schema.sql`: tạo bảng `orders` và seed data idempotent.
+- `package.json`: đã khai báo dependency `pg`.
 
-Env vars nên hỗ trợ:
+App đọc config từ:
 
 ```bash
 DATABASE_URL=postgres://devops_demo:devops_demo@localhost:5432/devops_demo
@@ -47,35 +47,17 @@ PGUSER=devops_demo
 PGPASSWORD=devops_demo
 ```
 
-Endpoint nên có:
+Endpoint đã có:
 
 - `GET /api/db/health`: chạy `select 1`.
 - `GET /api/orders`: đọc danh sách order.
 - `GET /api/orders/:id`: đọc một order.
 - `POST /api/orders`: tạo order demo nếu muốn thực hành write.
 
-Giữ nguyên:
+Endpoint health riêng biệt:
 
 - `GET /health`: chỉ báo app process còn sống, không phụ thuộc DB.
 - `GET /flow`: vẫn dùng để demo request path.
-
-Schema demo:
-
-```sql
-create table if not exists orders (
-  id serial primary key,
-  customer_name text not null,
-  total_usd numeric(10, 2) not null,
-  status text not null default 'created',
-  created_at timestamptz not null default now()
-);
-
-insert into orders (customer_name, total_usd, status)
-values
-  ('Demo User', 29.00, 'paid'),
-  ('Mobile App User', 49.00, 'created')
-on conflict do nothing;
-```
 
 ## Lệnh CLI kiểm tra/debug
 
@@ -104,20 +86,32 @@ docker exec -i learn-devops-demo-postgres \
   psql -U devops_demo -d devops_demo < server/schema.sql
 ```
 
-Sau khi app được bổ sung DB code:
+Chạy app với PostgreSQL local:
 
 ```bash
 cd server
 DATABASE_URL=postgres://devops_demo:devops_demo@localhost:5432/devops_demo node app.js
+```
+
+Từ terminal khác:
+
+```bash
 curl -i http://localhost:3000/api/db/health
 curl -i http://localhost:3000/api/orders
+curl -i http://localhost:3000/api/orders/1
+curl -i \
+  -H "Content-Type: application/json" \
+  -d '{"customerName":"CLI User","totalUsd":19.99}' \
+  http://localhost:3000/api/orders
 ```
 
 ## Expected result
 
 - PostgreSQL local chạy trên port 5432.
 - `select version()` thành công.
-- Sau khi bổ sung code, `/api/db/health` trả HTTP 200 và `/api/orders` trả dữ liệu từ bảng `orders`.
+- `/api/db/health` trả HTTP 200.
+- `/api/orders` và `/api/orders/1` trả dữ liệu từ bảng `orders`.
+- `POST /api/orders` tạo order mới và trả HTTP 201.
 
 ## Cleanup
 

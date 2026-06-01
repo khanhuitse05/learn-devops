@@ -2,11 +2,12 @@
 
 ## Mục tiêu
 
-Build Docker image từ `./server` và push lên Amazon ECR để ECS có thể pull image.
+Build Docker image hoàn chỉnh từ `./server` và push lên Amazon ECR để ECS có thể pull image. Các bước sau chỉ cấu hình hạ tầng và secret, không thêm code vào image.
 
 ## Kiến thức cần hiểu
 
 - ECR repository lưu Docker image.
+- Image đã chứa app health, flow demo và PostgreSQL endpoints.
 - ECS task definition nên dùng image tag cụ thể, ví dụ commit SHA hoặc version.
 - `latest` tiện cho lab nhưng không tốt cho rollback production.
 - ECR storage tính phí theo dung lượng image.
@@ -73,6 +74,7 @@ aws ecr describe-images \
 - ECR repo `learn-devops-demo-node` tồn tại.
 - Image tag `demo-001` xuất hiện trong ECR.
 - Bạn có full image URI để dùng trong ECS task definition.
+- Không cần sửa source hoặc build lại image chỉ để chuyển từ PostgreSQL local sang RDS.
 
 ## Cleanup
 

@@ -2,7 +2,7 @@
 
 ## Mục tiêu
 
-Đưa database password và connection string ra khỏi plain env trong task definition. Ưu tiên cách tiết kiệm bằng SSM Parameter Store; dùng Secrets Manager khi muốn quản lý secret đúng nghĩa hơn.
+Inject RDS connection string vào server image có sẵn mà không sửa code hoặc rebuild image. Ưu tiên SSM Parameter Store; dùng Secrets Manager khi muốn quản lý secret đúng nghĩa hơn.
 
 ## Kiến thức cần hiểu
 
@@ -10,6 +10,7 @@
 - SSM Parameter Store SecureString có thể đủ cho lab tiết kiệm.
 - Secrets Manager có tính năng secret lifecycle/rotation tốt hơn nhưng tính phí theo secret.
 - ECS task execution role cần quyền đọc secret/parameter.
+- App đã đọc `DATABASE_URL`; bước này chỉ cấu hình runtime.
 
 ## Chi phí ước lượng
 
@@ -65,6 +66,13 @@ aws ssm get-parameter \
   --output text
 ```
 
+Sau khi deploy task definition revision mới, test qua ALB:
+
+```bash
+curl -i "http://$ALB_DNS/api/db/health"
+curl -i "http://$ALB_DNS/api/orders"
+```
+
 Policy tối thiểu cho role đọc parameter:
 
 ```json
@@ -88,6 +96,7 @@ Policy tối thiểu cho role đọc parameter:
 - Task definition không chứa DB password plain text.
 - ECS task nhận `DATABASE_URL` từ SSM hoặc Secrets Manager.
 - App kết nối RDS thành công sau deploy revision mới.
+- `/api/db/health` và `/api/orders` trả HTTP 200 qua ALB.
 
 ## Cleanup
 

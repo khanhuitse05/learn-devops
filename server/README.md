@@ -1,12 +1,12 @@
 # Demo Node.js Systemd Service
 
-This folder contains a small Node.js HTTP app for learning DevOps basics with `systemd`, `systemctl`, and `journalctl`.
-
-The app has no external npm dependencies.
+This folder contains a complete Node.js demo app for learning DevOps basics with `systemd`, Docker, ECS, ALB, and PostgreSQL. The demo roadmap changes infrastructure and environment variables only; it does not require source-code edits between steps.
 
 ## Files
 
 - `app.js`: demo HTTP server
+- `schema.sql`: local PostgreSQL schema and seed data
+- `compose.yml`: local app and PostgreSQL stack with automatic schema initialization
 - `package.json`: Node project metadata and scripts
 - `devops-demo-node.service`: sample `systemd` unit file
 - `Dockerfile`: container image for running without Node.js installed on the host
@@ -15,6 +15,7 @@ The app has no external npm dependencies.
 ## Run Locally
 
 ```bash
+npm ci
 node app.js
 ```
 
@@ -25,6 +26,80 @@ curl http://localhost:3000/
 curl http://localhost:3000/health
 curl http://localhost:3000/flow
 curl http://localhost:3000/api/demo-order
+```
+
+The app process can start without PostgreSQL. In that case `/health` still
+returns HTTP `200`, while `/api/db/health` returns HTTP `503`.
+
+## Endpoints
+
+| Endpoint | Purpose |
+| --- | --- |
+| `GET /health` | App process health for ALB and ECS |
+| `GET /flow` | Request-path learning demo |
+| `GET /api/demo-order` | Simulated RDS, Redis, and EFS dependency demo |
+| `GET /api/db/health` | Real PostgreSQL `select 1` check |
+| `GET /api/orders` | Read real PostgreSQL orders |
+| `GET /api/orders/:id` | Read one real PostgreSQL order |
+| `POST /api/orders` | Create one real PostgreSQL order |
+| `GET /crash` | Intentional process failure for restart practice |
+
+## Run with Local PostgreSQL
+
+Start PostgreSQL:
+
+```bash
+docker run --name learn-devops-demo-postgres \
+  -e POSTGRES_DB=devops_demo \
+  -e POSTGRES_USER=devops_demo \
+  -e POSTGRES_PASSWORD=devops_demo \
+  -p 5432:5432 \
+  -d postgres:16-alpine
+```
+
+Create the schema and seed data:
+
+```bash
+docker exec -i learn-devops-demo-postgres \
+  psql -U devops_demo -d devops_demo < schema.sql
+```
+
+Start the app:
+
+```bash
+DATABASE_URL=postgres://devops_demo:devops_demo@localhost:5432/devops_demo node app.js
+```
+
+Test the real PostgreSQL endpoints from another terminal:
+
+```bash
+curl -i http://localhost:3000/api/db/health
+curl -i http://localhost:3000/api/orders
+curl -i http://localhost:3000/api/orders/1
+curl -i \
+  -H "Content-Type: application/json" \
+  -d '{"customerName":"CLI User","totalUsd":19.99}' \
+  http://localhost:3000/api/orders
+```
+
+`/health` only checks the app process. `/api/db/health` checks PostgreSQL
+separately so an ALB or ECS health check does not depend on database health.
+
+## Run App and PostgreSQL with Docker Compose
+
+```bash
+docker compose up --build -d
+docker compose ps
+curl -i http://localhost:3000/health
+curl -i http://localhost:3000/api/db/health
+curl -i http://localhost:3000/api/orders
+```
+
+The PostgreSQL container applies `schema.sql` automatically when its data volume
+is first created. Reset the local database when needed:
+
+```bash
+docker compose down -v
 ```
 
 ## M1 Demo: Typical Production Flow
@@ -126,6 +201,8 @@ These commands assume the repository is copied to `/opt/learn-devops`.
 sudo mkdir -p /opt/learn-devops
 sudo cp -R ~/learn-devops/* /opt/learn-devops/
 sudo chown -R ubuntu:ubuntu /opt/learn-devops
+cd /opt/learn-devops/server
+npm ci --omit=dev
 ```
 
 Check Node.js path:

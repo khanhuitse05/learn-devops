@@ -1,6 +1,7 @@
 "use strict";
 
 const http = require("http");
+const { Pool } = require("pg");
 
 const port = Number(process.env.PORT || 3000);
 const host = process.env.HOST || "0.0.0.0";
@@ -8,6 +9,8 @@ const failOnStart = process.env.FAIL_ON_START === "true";
 const rdsStatus = process.env.DEMO_RDS_STATUS || "ok";
 const redisStatus = process.env.DEMO_REDIS_STATUS || "ok";
 const efsStatus = process.env.DEMO_EFS_STATUS || "ok";
+const databaseUrl = process.env.DATABASE_URL;
+const pool = new Pool(databaseUrl ? { connectionString: databaseUrl } : undefined);
 
 const dependencyPorts = {
   rds: Number(process.env.DEMO_RDS_PORT || 5432),
@@ -36,6 +39,84 @@ function log(level, message, extra = {}) {
 function sendJson(res, statusCode, body) {
   res.writeHead(statusCode, { "content-type": "application/json" });
   res.end(JSON.stringify(body, null, 2));
+}
+
+class HttpError extends Error {
+  constructor(statusCode, message) {
+    super(message);
+    this.name = "HttpError";
+    this.statusCode = statusCode;
+  }
+}
+
+async function readJsonBody(req) {
+  const chunks = [];
+  let length = 0;
+
+  for await (const chunk of req) {
+    length += chunk.length;
+    if (length > 1024 * 1024) {
+      throw new HttpError(413, "Request body must be smaller than 1 MB.");
+    }
+    chunks.push(chunk);
+  }
+
+  const body = Buffer.concat(chunks).toString("utf8");
+  if (!body.trim()) {
+    return {};
+  }
+
+  try {
+    return JSON.parse(body);
+  } catch {
+    throw new HttpError(400, "Request body must be valid JSON.");
+  }
+}
+
+async function queryDatabase(operation, text, values = []) {
+  try {
+    return await pool.query(text, values);
+  } catch (error) {
+    error.databaseOperation = operation;
+    throw error;
+  }
+}
+
+function getOrderId(pathname) {
+  const id = pathname.slice("/api/orders/".length);
+  if (!/^[1-9]\d*$/.test(id)) {
+    throw new HttpError(400, "Order id must be a positive integer.");
+  }
+
+  return Number(id);
+}
+
+function parseNewOrder(body) {
+  const customerName = typeof body.customerName === "string"
+    ? body.customerName.trim()
+    : "";
+  const hasTotal = typeof body.totalUsd === "number"
+    || (typeof body.totalUsd === "string" && body.totalUsd.trim() !== "");
+  const totalUsd = hasTotal ? Number(body.totalUsd) : Number.NaN;
+  const status = body.status === undefined ? "created" : body.status;
+
+  if (!customerName) {
+    throw new HttpError(400, "customerName is required.");
+  }
+
+  if (!Number.isFinite(totalUsd) || totalUsd < 0) {
+    throw new HttpError(400, "totalUsd must be a non-negative number.");
+  }
+
+  if (typeof status !== "string" || !status.trim()) {
+    throw new HttpError(400, "status must be a non-empty string.");
+  }
+
+  return {
+    customerName,
+    totalUsd,
+    status: status.trim(),
+  };
 }
 
 function getRequestContext(req) {
@@ -91,19 +172,21 @@ if (failOnStart) {
   process.exit(1);
 }
 
-const server = http.createServer((req, res) => {
+async function handleRequest(req, res) {
+  const pathname = new URL(req.url, `http://${req.headers.host || "localhost"}`).pathname;
+
   log("info", "request received", {
     method: req.method,
-    url: req.url,
+    url: pathname,
     userAgent: req.headers["user-agent"],
   });
 
-  if (req.url === "/health") {
+  if (pathname === "/health") {
     sendJson(res, 200, { status: "ok", service: "devops-demo-node" });
     return;
   }
 
-  if (req.url === "/flow") {
+  if (pathname === "/flow") {
     const context = getRequestContext(req);
     const flow = [
       "Mobile app / browser sends request",
@@ -134,7 +217,7 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  if (req.url === "/api/demo-order") {
+  if (pathname === "/api/demo-order") {
     const context = getRequestContext(req);
     const dependencies = [
       dependency("RDS", rdsStatus, dependencyPorts.rds, "persistent relational data"),
@@ -168,7 +251,87 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  if (req.url === "/crash") {
+  if (req.method === "GET" && pathname === "/api/db/health") {
+    await queryDatabase("health check", "select 1 as result");
+    sendJson(res, 200, { status: "ok", database: "reachable" });
+    return;
+  }
+
+  if (req.method === "GET" && pathname === "/api/orders") {
+    const result = await queryDatabase(
+      "list orders",
+      `select
+         id,
+         customer_name as "customerName",
+         total_usd as "totalUsd",
+         status,
+         created_at as "createdAt"
+       from orders
+       order by id`
+    );
+    sendJson(res, 200, {
+      status: "ok",
+      count: result.rowCount,
+      orders: result.rows,
+    });
+    return;
+  }
+
+  if (req.method === "POST" && pathname === "/api/orders") {
+    const order = parseNewOrder(await readJsonBody(req));
+    const result = await queryDatabase(
+      "create order",
+      `insert into orders (customer_name, total_usd, status)
+       values ($1, $2, $3)
+       returning
+         id,
+         customer_name as "customerName",
+         total_usd as "totalUsd",
+         status,
+         created_at as "createdAt"`,
+      [order.customerName, order.totalUsd, order.status]
+    );
+    sendJson(res, 201, { status: "ok", order: result.rows[0] });
+    return;
+  }
+
+  if (pathname.startsWith("/api/orders/")) {
+    if (req.method !== "GET") {
+      throw new HttpError(405, "Only GET is supported for a single order.");
+    }
+
+    const orderId = getOrderId(pathname);
+    const result = await queryDatabase(
+      "get order",
+      `select
+         id,
+         customer_name as "customerName",
+         total_usd as "totalUsd",
+         status,
+         created_at as "createdAt"
+       from orders
+       where id = $1`,
+      [orderId]
+    );
+
+    if (result.rowCount === 0) {
+      sendJson(res, 404, { status: "not_found", message: "Order not found." });
+      return;
+    }
+
+    sendJson(res, 200, { status: "ok", order: result.rows[0] });
+    return;
+  }
+
+  if (pathname === "/api/db/health") {
+    throw new HttpError(405, "Only GET is supported for database health.");
+  }
+
+  if (pathname === "/api/orders") {
+    throw new HttpError(405, "Only GET and POST are supported for orders.");
+  }
+
+  if (pathname === "/crash") {
     log("error", "manual crash requested from /crash endpoint");
     sendJson(res, 500, { status: "crashing" });
 
@@ -179,7 +342,60 @@ const server = http.createServer((req, res) => {
   }
 
   res.writeHead(200, { "content-type": "text/plain" });
-  res.end("Hello from devops-demo-node. Try /health, /flow, /api/demo-order, or /crash\n");
+  res.end(
+    "Hello from devops-demo-node. Try /health, /flow, /api/demo-order, /api/db/health, /api/orders, or /crash\n"
+  );
+}
+
+function handleRequestError(error, req, res) {
+  if (res.headersSent) {
+    res.end();
+    return;
+  }
+
+  if (error instanceof HttpError) {
+    log("error", "invalid request", {
+      method: req.method,
+      url: req.url,
+      statusCode: error.statusCode,
+      errorMessage: error.message,
+    });
+    sendJson(res, error.statusCode, {
+      status: "request_error",
+      message: error.message,
+    });
+    return;
+  }
+
+  if (error.databaseOperation) {
+    log("error", "database request failed", {
+      operation: error.databaseOperation,
+      errorName: error.name,
+      errorMessage: error.message,
+    });
+    sendJson(res, 503, {
+      status: "database_error",
+      message: "Database request failed. Check PostgreSQL connection and schema.",
+    });
+    return;
+  }
+
+  log("error", "request failed", {
+    method: req.method,
+    url: req.url,
+    errorName: error.name,
+    errorMessage: error.message,
+  });
+  sendJson(res, 500, {
+    status: "internal_error",
+    message: "Unexpected server error.",
+  });
+}
+
+const server = http.createServer((req, res) => {
+  handleRequest(req, res).catch((error) => {
+    handleRequestError(error, req, res);
+  });
 });
 
 server.listen(port, host, () => {
@@ -195,13 +411,25 @@ setInterval(() => {
   });
 }, 30000);
 
-process.on("SIGTERM", () => {
-  log("info", "SIGTERM received, shutting down");
-  server.close(() => {
-    log("info", "server stopped");
-    process.exit(0);
+function shutdown(signal) {
+  log("info", `${signal} received, shutting down`);
+  server.close(async () => {
+    try {
+      await pool.end();
+      log("info", "server stopped");
+      process.exit(0);
+    } catch (error) {
+      log("error", "database pool shutdown failed", {
+        errorName: error.name,
+        errorMessage: error.message,
+      });
+      process.exit(1);
+    }
   });
-});
+}
+
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => shutdown("SIGINT"));
 
 process.on("uncaughtException", (error) => {
   log("error", "uncaught exception", {

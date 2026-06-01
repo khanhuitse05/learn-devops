@@ -64,6 +64,13 @@ curl -i "http://$ALB_DNS/flow"
 curl -i "http://$ALB_DNS/api/demo-order"
 ```
 
+Các endpoint PostgreSQL đã tồn tại trong image nhưng chưa cần pass ở bước này. Sau khi inject `DATABASE_URL` trong step 09, test thêm:
+
+```bash
+curl -i "http://$ALB_DNS/api/db/health"
+curl -i "http://$ALB_DNS/api/orders"
+```
+
 Xem target health:
 
 ```bash
@@ -82,6 +89,7 @@ aws elbv2 describe-target-health \
 - ALB DNS trả HTTP 200 cho `/health`.
 - Target group health là `healthy`.
 - `/flow` cho thấy entry layer có thể mô phỏng ALB.
+- Không cần sửa code server khi attach ALB.
 
 ## Cleanup
 

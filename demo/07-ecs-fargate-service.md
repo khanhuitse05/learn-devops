@@ -2,7 +2,7 @@
 
 ## Mục tiêu
 
-Deploy container app lên ECS/Fargate. Ban đầu có thể chạy service nội bộ, sau đó gắn ALB ở step tiếp theo.
+Deploy image server hoàn chỉnh lên ECS/Fargate. Ban đầu chạy app health độc lập với DB, sau đó gắn ALB và inject RDS secret ở các step tiếp theo.
 
 ## Kiến thức cần hiểu
 
@@ -10,6 +10,7 @@ Deploy container app lên ECS/Fargate. Ban đầu có thể chạy service nội
 - Task definition mô tả container, CPU, memory, env, log config.
 - Fargate tính phí theo vCPU, memory và thời gian task chạy.
 - Execution role dùng để pull image và ghi log; task role dùng cho app gọi AWS service.
+- Image đã hỗ trợ PostgreSQL. Không thêm code server trong bước ECS.
 
 ## Chi phí ước lượng
 
@@ -42,6 +43,8 @@ ECS service sẽ tự giữ task chạy liên tục theo desired count. Sau lab 
    - Desired tasks: `1`.
    - Subnets: private subnets nếu đã có ALB/NAT phù hợp; để tiết kiệm và đơn giản có thể dùng public subnet với assign public IP cho lab ngắn.
    - Security Group: `learn-devops-demo-ecs-sg`.
+
+Chưa inject `DATABASE_URL` plain text trong bước này. `/health` vẫn hoạt động; các endpoint DB sẽ kết nối RDS sau khi cấu hình secret ở step 09.
 
 ## Lệnh CLI kiểm tra/debug
 
@@ -83,6 +86,7 @@ aws logs tail /ecs/learn-devops-demo-node --since 30m
 - ECS cluster active.
 - Service desired count 1, running count 1.
 - CloudWatch Logs có dòng `server started`.
+- Không cần sửa hoặc rebuild server image.
 
 ## Cleanup
 
@@ -110,3 +114,4 @@ aws ecs delete-service \
 - Pull image fail: kiểm tra ECR URI và execution role.
 - Không có logs: kiểm tra task execution role và log group.
 - App không listen: image phải dùng `HOST=0.0.0.0` và `PORT=3000`.
+- `/api/db/health` trả HTTP 503 trước step 09: đây là expected result vì task chưa nhận `DATABASE_URL`.

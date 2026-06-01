@@ -35,9 +35,10 @@ small AWS ECS/Fargate production-style architecture.
 
 ## Practice App
 
-The `server/` directory contains a small Node.js demo app used by the AWS labs.
-The `demo/` directory contains a more step-by-step practical path from local
-server to ECS/Fargate.
+The `server/` directory contains a complete Node.js demo app used by the AWS
+labs. The `demo/` directory contains a step-by-step practical path from local
+server to ECS/Fargate. The labs change infrastructure and runtime configuration;
+they do not require source-code edits between steps.
 
 ## Cost Reminder
 

@@ -1,15 +1,17 @@
-# 01 - Local Server Baseline
+# 01 - Complete Local Server Baseline
 
 ## Mục tiêu
 
-Chạy app Node.js hiện có trong `./server` và hiểu các endpoint trước khi đưa lên AWS.
+Chạy server hoàn chỉnh trong `./server` và hiểu các endpoint trước khi đưa lên AWS. Bước này vẫn cần thiết vì nó tạo baseline để phân biệt app health với database health khi debug các bước sau.
 
 ## Kiến thức cần hiểu
 
-- App hiện tại không có dependency npm ngoài.
+- Server đã hoàn chỉnh trước khi bắt đầu demo; các bước sau không yêu cầu sửa source code.
 - `/health` phù hợp làm health check cho ALB/ECS.
 - `/flow` giúp học request path.
-- `/api/demo-order` hiện đang mô phỏng RDS/Redis/EFS, chưa kết nối database thật.
+- `/api/demo-order` mô phỏng RDS/Redis/EFS để học dependency failure.
+- `/api/db/health` và `/api/orders` gọi PostgreSQL thật khi database đã được cấu hình.
+- App process vẫn chạy khi PostgreSQL chưa sẵn sàng.
 
 ## Chi phí ước lượng
 
@@ -29,6 +31,7 @@ Từ root repo:
 
 ```bash
 cd server
+npm ci
 npm run check
 node app.js
 ```
@@ -40,6 +43,7 @@ curl -i http://localhost:3000/
 curl -i http://localhost:3000/health
 curl -i http://localhost:3000/flow
 curl -i http://localhost:3000/api/demo-order
+curl -i http://localhost:3000/api/db/health
 ```
 
 Mô phỏng request đi qua ALB HTTPS:
@@ -54,10 +58,15 @@ curl -i \
   http://localhost:3000/flow
 ```
 
-Mô phỏng dependency fail:
+Sau khi dừng server cũ bằng `Ctrl+C`, mô phỏng dependency fail:
 
 ```bash
 DEMO_RDS_STATUS=down node app.js
+```
+
+Từ terminal khác:
+
+```bash
 curl -i http://localhost:3000/api/demo-order
 ```
 
@@ -66,6 +75,7 @@ curl -i http://localhost:3000/api/demo-order
 - `/health` trả HTTP 200.
 - `/flow` trả JSON mô tả DNS/TLS/ALB/ECS.
 - `/api/demo-order` trả `status: ok` khi dependency env là `ok`.
+- `/api/db/health` trả HTTP 503 ở bước này vì chưa chạy PostgreSQL. Đây là expected result.
 - Khi `DEMO_RDS_STATUS=down`, `/api/demo-order` trả HTTP 503.
 
 ## Cleanup
@@ -76,4 +86,5 @@ Dừng server bằng `Ctrl+C`.
 
 - Port 3000 bị dùng: chạy `PORT=3001 node app.js`.
 - `node: command not found`: cài Node.js 18+.
+- `Cannot find module 'pg'`: chạy `npm ci` trong `./server`.
 - Curl không kết nối được: kiểm tra server còn chạy không.
