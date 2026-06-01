@@ -88,6 +88,8 @@ Có thể verify cơ bản ngay trên RDS Console:
 
 Để chạy lệnh SQL, dùng EC2 test host, ECS task, CloudShell VPC environment, VPN hoặc bastion/SSM phù hợp. Không bật public access chỉ để debug.
 
+Hướng dẫn chi tiết: [CloudShell VPC environment](more/cloudshell-vpc.md).
+
 Từ EC2 test host hoặc ECS task trong cùng VPC:
 
 ```bash
