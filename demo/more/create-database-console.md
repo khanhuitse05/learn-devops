@@ -16,7 +16,7 @@ RDS PostgreSQL: learn-devops-demo-postgres
 
 Database chạy trong private subnets và chỉ nhận kết nối từ Security Group của ECS task.
 
-## Điều kiện trước khi tạo
+## Prerequisites
 
 Hoàn thành bài [04 - VPC Network](../04-vpc-network.md) trước. Cần có:
 
@@ -24,6 +24,8 @@ Hoàn thành bài [04 - VPC Network](../04-vpc-network.md) trước. Cần có:
 - Hai private subnet thuộc hai Availability Zone khác nhau.
 - Security Group `learn-devops-demo-rds-sg`.
 - Rule inbound PostgreSQL port `5432` của RDS SG chỉ nhận traffic từ `learn-devops-demo-ecs-sg`.
+- Nếu đã cleanup network, chạy lại [step 04](../04-vpc-network.md) trước khi tạo database.
+- Nếu database `learn-devops-demo-postgres` đã tồn tại, kiểm tra status trước khi tạo lại.
 
 ## Mở màn hình tạo database
 

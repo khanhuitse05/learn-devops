@@ -4,6 +4,13 @@
 
 Xóa toàn bộ resource demo để ngừng phát sinh chi phí, sau đó kiểm tra Billing.
 
+## Prerequisites
+
+- Chỉ chạy step này khi muốn kết thúc demo hoặc dừng học đủ lâu để cần ngừng chi phí.
+- AWS CLI đăng nhập đúng account và region đã dùng cho lab.
+- Không cần tạo lại resource đã cleanup ở các step trước. Resource nào còn tồn tại thì xóa theo checklist bên dưới.
+- Xác nhận không có resource production hoặc resource ngoài lab dùng prefix `learn-devops-demo`.
+
 ## Kiến thức cần hiểu
 
 - Một số resource phụ thuộc nhau nên phải xóa theo thứ tự.

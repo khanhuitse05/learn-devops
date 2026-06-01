@@ -4,6 +4,13 @@
 
 Chạy app và PostgreSQL bằng Docker Compose để mô phỏng cách ECS task kết nối database qua network nội bộ.
 
+## Prerequisites
+
+- Đã hoàn thành [step 02](02-postgresql-local.md) để hiểu cách app kết nối PostgreSQL.
+- Docker Desktop và Docker daemon đang chạy.
+- Đã cleanup container PostgreSQL tạo thủ công ở step 02 để tránh trùng port `5432`.
+- Các file `server/compose.yml`, `server/Dockerfile` và `server/schema.sql` còn tồn tại.
+
 ## Kiến thức cần hiểu
 
 - Trong Docker Compose, service gọi nhau bằng service name.

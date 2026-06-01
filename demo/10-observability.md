@@ -4,6 +4,13 @@
 
 Theo dõi app bằng CloudWatch Logs, metric cơ bản và alarm để biết service có chạy ổn không.
 
+## Prerequisites
+
+- Đã hoàn thành [step 07](07-ecs-fargate-service.md): ECS service còn tồn tại và task đang chạy để tạo logs và metrics.
+- Nên giữ ALB từ [step 08](08-alb-public-entry.md) để tạo request test và xem ALB metrics.
+- Nếu muốn test endpoint database, đã hoàn thành [step 09](09-secrets-and-env.md).
+- Nếu đã cleanup ECS service hoặc ALB: chạy lại step tương ứng trước khi quan sát metrics.
+
 ## Kiến thức cần hiểu
 
 - Container nên log ra stdout/stderr.

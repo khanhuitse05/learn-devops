@@ -4,6 +4,14 @@
 
 Tạo Amazon RDS PostgreSQL private để server hoàn chỉnh dùng database managed. Lab này nối tiếp sau khi app đã chạy được PostgreSQL local; không cần sửa source code.
 
+## Prerequisites
+
+- Đã hoàn thành [step 04](04-vpc-network.md).
+- VPC `learn-devops-demo-vpc` vẫn tồn tại.
+- Có 2 private subnet thuộc 2 Availability Zone khác nhau.
+- Security Group `learn-devops-demo-rds-sg` vẫn tồn tại và cho phép PostgreSQL port `5432` từ `learn-devops-demo-ecs-sg`.
+- Nếu đã cleanup network ở step 04: chạy lại [step 04](04-vpc-network.md) trước.
+
 ## Kiến thức cần hiểu
 
 - RDS là managed database, không SSH vào instance.

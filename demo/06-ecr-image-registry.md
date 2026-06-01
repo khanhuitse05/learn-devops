@@ -4,6 +4,14 @@
 
 Build Docker image hoàn chỉnh từ `./server` và push lên Amazon ECR để ECS có thể pull image. Các bước sau chỉ cấu hình hạ tầng và secret, không thêm code vào image.
 
+## Prerequisites
+
+- Đã hoàn thành local Docker flow ở [step 03](03-docker-compose-app-postgres.md).
+- Docker Desktop và Docker daemon đang chạy.
+- AWS CLI đăng nhập đúng account và region theo [step 00](00-prerequisites.md).
+- Không cần giữ RDS chạy để build và push image.
+- Nếu ECR repository đã tồn tại từ lần demo trước, có thể dùng lại hoặc xóa rồi tạo lại.
+
 ## Kiến thức cần hiểu
 
 - ECR repository lưu Docker image.

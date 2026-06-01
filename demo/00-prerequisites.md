@@ -4,6 +4,12 @@
 
 Chuẩn bị AWS account an toàn trước khi tạo bất kỳ resource nào. Sau bước này bạn có AWS CLI chạy được, biết region đang dùng, có budget alarm và naming convention để cleanup.
 
+## Prerequisites
+
+- Có AWS account và quyền truy cập AWS Console.
+- Có email nhận cảnh báo chi phí.
+- Máy local có terminal để cài và cấu hình AWS CLI.
+
 ## Kiến thức cần hiểu
 
 - Root account chỉ dùng cho việc quản trị account, không dùng hằng ngày.

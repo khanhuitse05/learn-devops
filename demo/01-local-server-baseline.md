@@ -4,6 +4,13 @@
 
 Chạy server hoàn chỉnh trong `./server` và hiểu các endpoint trước khi đưa lên AWS. Bước này vẫn cần thiết vì nó tạo baseline để phân biệt app health với database health khi debug các bước sau.
 
+## Prerequisites
+
+- Đã clone repo và đang đứng ở root folder `learn-devops`.
+- Máy local có Node.js 18+ và npm.
+- Chạy `npm ci` trong `./server` nếu chưa cài dependency.
+- Không phụ thuộc resource AWS từ step 00. Tuy vậy nên hoàn thành [step 00](00-prerequisites.md) trước khi bắt đầu các step AWS.
+
 ## Kiến thức cần hiểu
 
 - Server đã hoàn chỉnh trước khi bắt đầu demo; các bước sau không yêu cầu sửa source code.

@@ -4,6 +4,14 @@
 
 Deploy image server hoàn chỉnh lên ECS/Fargate. Ban đầu chạy app health độc lập với DB, sau đó gắn ALB và inject RDS secret ở các step tiếp theo.
 
+## Prerequisites
+
+- Đã hoàn thành [step 04](04-vpc-network.md): VPC, subnet và `learn-devops-demo-ecs-sg` vẫn tồn tại.
+- Đã hoàn thành [step 06](06-ecr-image-registry.md): ECR repository còn image tag `demo-001`.
+- Có ECS task execution role cho phép pull image từ ECR và ghi CloudWatch Logs.
+- Nếu đã cleanup network: chạy lại [step 04](04-vpc-network.md).
+- Nếu đã cleanup ECR repository: chạy lại [step 06](06-ecr-image-registry.md).
+
 ## Kiến thức cần hiểu
 
 - ECS cluster là nơi quản lý task/service.

@@ -2,6 +2,12 @@
 
 Hướng dẫn này dùng wizard `VPC and more` để tạo network cho bài [04 - VPC Network](../04-vpc-network.md).
 
+## Prerequisites
+
+- Đã hoàn thành [step 00](../00-prerequisites.md): đăng nhập đúng AWS account và chọn đúng region.
+- Kiểm tra VPC Console trước khi tạo để tránh tạo trùng `learn-devops-demo-vpc`.
+- Nếu VPC lab đã tồn tại và còn đủ subnet, route table và Internet Gateway, không cần tạo lại.
+
 ## Kết quả cần tạo
 
 ```text

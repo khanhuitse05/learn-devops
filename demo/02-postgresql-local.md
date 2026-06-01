@@ -4,6 +4,13 @@
 
 Chạy PostgreSQL local để dùng các endpoint database đã có sẵn trong server. Bước này chỉ cấu hình runtime và tạo schema, không sửa source code.
 
+## Prerequisites
+
+- Đã chạy app local và hiểu endpoint theo [step 01](01-local-server-baseline.md).
+- Máy local có Docker Desktop và Docker daemon đang chạy.
+- Port `5432` đang trống hoặc bạn biết cách đổi port host.
+- Nếu đã cleanup step 01: không cần tạo lại resource nào; chỉ chạy lại app khi đến bước test API.
+
 ## Kiến thức cần hiểu
 
 - RDS PostgreSQL vẫn dùng protocol PostgreSQL chuẩn.

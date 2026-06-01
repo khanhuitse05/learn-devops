@@ -19,6 +19,13 @@ export DEMO_PREFIX=learn-devops-demo
 aws sts get-caller-identity
 ```
 
+## Prerequisites Và Resume Sau Cleanup
+
+- Bắt đầu từ step 00 nếu đây là lần đầu chạy demo.
+- Mỗi file step có mục `Prerequisites`. Kiểm tra mục này trước khi thao tác.
+- Nếu đã cleanup resource ở step trước, chạy lại step được link trong `Prerequisites`.
+- Không cần tạo lại resource vẫn còn tồn tại. Kiểm tra region và tên resource trước để tránh tạo trùng.
+
 ## Roadmap Modules
 
 | Step | File | AWS service | Mục tiêu | Output cần đạt | Chi phí ước lượng | Cảnh báo |

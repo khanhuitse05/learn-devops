@@ -4,6 +4,14 @@
 
 Tạo Application Load Balancer public để truy cập app ECS qua HTTP và test `/health`, `/flow`, `/api/demo-order`.
 
+## Prerequisites
+
+- Đã hoàn thành [step 04](04-vpc-network.md): 2 public subnet và `learn-devops-demo-alb-sg` vẫn tồn tại.
+- Đã hoàn thành [step 07](07-ecs-fargate-service.md): ECS service còn tồn tại và desired count là `1`.
+- ECS task đang ở trạng thái `RUNNING` và app lắng nghe port `3000`.
+- Nếu đã scale ECS service về `0`, scale lại về `1` trước.
+- Nếu đã cleanup ALB từ lần chạy trước, tạo lại theo step này.
+
 ## Kiến thức cần hiểu
 
 - ALB nằm ở public subnets.

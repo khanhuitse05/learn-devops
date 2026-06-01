@@ -4,6 +4,13 @@
 
 Tạo network tối giản để chuẩn bị cho RDS, ECS và ALB. Ưu tiên tiết kiệm chi phí, nên bước đầu không tạo NAT Gateway nếu chưa cần.
 
+## Prerequisites
+
+- Đã hoàn thành [step 00](00-prerequisites.md): AWS CLI đăng nhập đúng account và biết region dùng cho lab.
+- Đã dừng stack local từ [step 03](03-docker-compose-app-postgres.md) nếu không cần chạy tiếp local.
+- Chưa cần resource AWS từ các step trước.
+- Nếu đã tạo VPC lab trước đó, kiểm tra trước khi tạo lại để tránh trùng resource.
+
 ## Kiến thức cần hiểu
 
 - ALB cần public subnet.

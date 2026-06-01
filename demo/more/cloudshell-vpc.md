@@ -8,7 +8,7 @@ CloudShell thông thường là terminal chạy trên trình duyệt và đã đ
 
 Environment này phù hợp để debug resource private trong VPC mà không cần bật public access hoặc tạo EC2 test host. Trong ví dụ bên dưới, CloudShell VPC environment được dùng để kết nối RDS PostgreSQL có `PubliclyAccessible=false`.
 
-## Điều kiện cho ví dụ test RDS
+## Prerequisites
 
 Cần có:
 
@@ -18,6 +18,7 @@ Cần có:
 - Security Group `learn-devops-demo-ecs-sg`.
 - RDS Security Group `learn-devops-demo-rds-sg` có inbound rule PostgreSQL port `5432` từ `learn-devops-demo-ecs-sg`.
 - DB instance endpoint, database name, username và password.
+- Nếu đã cleanup RDS, chạy lại [step 05](../05-rds-postgresql.md) trước.
 
 ## Tạo CloudShell VPC environment
 

@@ -4,6 +4,14 @@
 
 Inject RDS connection string vào server image có sẵn mà không sửa code hoặc rebuild image. Ưu tiên SSM Parameter Store; dùng Secrets Manager khi muốn quản lý secret đúng nghĩa hơn.
 
+## Prerequisites
+
+- Đã hoàn thành [step 05](05-rds-postgresql.md): RDS vẫn tồn tại và có endpoint.
+- Đã hoàn thành [step 07](07-ecs-fargate-service.md): ECS service và task definition vẫn tồn tại.
+- Nên giữ ALB từ [step 08](08-alb-public-entry.md) để test API từ bên ngoài.
+- ECS task execution role có thể được cập nhật quyền đọc SSM parameter hoặc Secrets Manager secret.
+- Nếu đã cleanup RDS: chạy lại [step 05](05-rds-postgresql.md). Nếu đã cleanup ECS service: chạy lại [step 07](07-ecs-fargate-service.md).
+
 ## Kiến thức cần hiểu
 
 - Env var thường hiện trong task definition revision, không nên chứa password plain text.
