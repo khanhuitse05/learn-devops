@@ -59,7 +59,8 @@ aws ec2 describe-availability-zones \
 
 ## Cleanup
 
-Không cần cleanup nếu chỉ tạo budget. Có thể giữ budget để bảo vệ account trong các lab sau.
+- Nếu học tiếp: giữ budget để bảo vệ account trong các lab sau.
+- Nếu dừng tại đây: vẫn nên giữ budget. Budget không tạo AWS resource chạy liên tục.
 
 ## Troubleshooting
 

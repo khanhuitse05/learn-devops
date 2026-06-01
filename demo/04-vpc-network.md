@@ -184,12 +184,14 @@ aws ec2 describe-subnets \
   --output table
 ```
 
-Kết quả mong đợi: có 4 subnet thuộc 2 Availability Zone khác nhau với CIDR:
+Kết quả mong đợi: có 4 subnet thuộc 2 Availability Zone khác nhau. Nếu đã customize CIDR theo hướng dẫn, kết quả gồm:
 
 - `10.0.1.0/24`
 - `10.0.2.0/24`
 - `10.0.11.0/24`
 - `10.0.12.0/24`
+
+Nếu giữ mặc định trong wizard, AWS sẽ tự chia CIDR khác, ví dụ `/20`. Điều này vẫn đúng nếu các CIDR không trùng nhau và đều thuộc VPC `10.0.0.0/16`.
 
 ### 4. Kiểm tra Security Group
 
@@ -231,24 +233,16 @@ VPC_ID=vpc-xxxxxxxxxxxxxxxxx
 
 ## Expected result
 
-- Có VPC và 4 subnet theo đúng CIDR.
+- Có VPC và 4 subnet không trùng CIDR, thuộc đúng 2 Availability Zone.
 - Public subnet có route ra Internet Gateway.
 - Private subnet không public trực tiếp ra internet.
 - Security Group RDS chỉ nhận traffic từ ECS SG, không mở `0.0.0.0/0`.
 
 ## Cleanup
 
-Chỉ cleanup network sau khi đã xóa RDS, ECS service, ALB và ENI liên quan.
-
-Thứ tự:
-
-1. Delete ALB/target group.
-2. Delete ECS service/cluster.
-3. Delete RDS.
-4. Delete security groups.
-5. Delete subnets.
-6. Detach/delete Internet Gateway.
-7. Delete VPC.
+- Nếu học tiếp: giữ VPC, subnet, route table, Internet Gateway và 3 Security Group. Step 05 dùng private subnet và RDS SG; step 07 dùng private subnet và ECS SG; step 08 dùng public subnet và ALB SG.
+- Nếu dừng tại đây: có thể xóa network vì chưa có RDS, ECS hoặc ALB phụ thuộc vào nó. Làm cleanup tổng hợp theo [step 11](11-cleanup-cost-control.md).
+- Không xóa network giữa chừng sau khi đã tạo RDS, ECS hoặc ALB. Phải xóa các resource phụ thuộc trước.
 
 ## Troubleshooting
 

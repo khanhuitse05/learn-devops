@@ -78,7 +78,8 @@ aws ecr describe-images \
 
 ## Cleanup
 
-Xóa repo và toàn bộ image:
+- Nếu học tiếp: giữ ECR repository và image tag `demo-001`. Step 07 cần image này để chạy ECS task.
+- Nếu dừng tại đây: xóa repository và toàn bộ image để ngừng lưu trữ image.
 
 ```bash
 aws ecr delete-repository \

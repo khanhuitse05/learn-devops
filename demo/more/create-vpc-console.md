@@ -25,7 +25,7 @@ Wizard tự sinh Name tag cho subnet, thường kèm loại subnet và Availabil
 
 Màn hình cần điền:
 
-Màn hình Create VPC với lựa chọn VPC and more
+![Màn hình Create VPC với lựa chọn VPC and more](../images/04-create-vpc.png)
 
 ## Điền VPC settings
 
@@ -33,7 +33,7 @@ Màn hình Create VPC với lựa chọn VPC and more
 | Field                      | Giá trị cần chọn hoặc nhập                        | Giải thích                                                    |
 | -------------------------- | ------------------------------------------------- | ------------------------------------------------------------- |
 | `Resources to create`      | `VPC and more`                                    | AWS tạo VPC và các thành phần network cơ bản trong một lần.   |
-| `Name tag auto-generation` | Bật `Auto-generate`, nhập `learn-devops-demo-vpc` | AWS tự tạo Name tag cho VPC, subnet và route table.           |
+| `Name tag auto-generation` | Bật `Auto-generate`, nhập `learn-devops-demo`     | AWS tự tạo Name tag cho VPC, subnet và route table.           |
 | `IPv4 CIDR block`          | `10.0.0.0/16`                                     | Dải IP private tổng của VPC. Các subnet sẽ lấy IP từ dải này. |
 | `IPv6 CIDR block`          | `No IPv6 CIDR block`                              | Lab này chưa dùng IPv6.                                       |
 | `Tenancy`                  | `Default`                                         | Dùng cấu hình thông thường. Không cần dedicated hardware.     |
@@ -51,7 +51,9 @@ Màn hình Create VPC với lựa chọn VPC and more
 | `Number of private subnets`          | `2`              | Mỗi AZ có một private subnet dành cho ECS task và RDS. |
 
 
-Mở `Customize subnets CIDR blocks`, sau đó điền (Nếu chỉ muốn dựng nhanh để thử ECS và ALB, có thể giữ mặc định):
+Có thể giữ CIDR mặc định do AWS tự sinh. ALB, ECS và RDS vẫn hoạt động bình thường nếu có đủ 2 public subnet, 2 private subnet và các CIDR không trùng nhau.
+
+Nếu muốn CIDR dễ đọc và dễ đối chiếu khi debug, mở `Customize subnets CIDR blocks`, sau đó điền:
 
 
 | Field                                   | CIDR           |
@@ -86,7 +88,8 @@ Vào `Subnets`, lọc theo VPC vừa tạo và xác nhận:
 - Có `2` public subnet.
 - Có `2` private subnet.
 - Bốn subnet thuộc đúng hai AZ khác nhau.
-- CIDR của bốn subnet khớp với bảng phía trên.
+- CIDR của bốn subnet không trùng nhau và đều thuộc VPC `10.0.0.0/16`.
+- Nếu đã customize CIDR, bốn subnet khớp với bảng phía trên.
 
 Vào `Route tables` và xác nhận:
 

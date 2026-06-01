@@ -100,7 +100,10 @@ Policy tối thiểu cho role đọc parameter:
 
 ## Cleanup
 
-Xóa SSM parameter:
+- Nếu học tiếp step 10: giữ SSM parameter hoặc secret để ECS task tiếp tục kết nối RDS.
+- Nếu dừng lab: xóa parameter hoặc secret sau khi xóa ECS service. Secrets Manager có thể phát sinh phí theo thời gian lưu trữ secret.
+
+Xóa SSM parameter nếu đã tạo:
 
 ```bash
 aws ssm delete-parameter --name /learn-devops-demo/db-url

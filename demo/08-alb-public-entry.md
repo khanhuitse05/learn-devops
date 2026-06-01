@@ -93,6 +93,11 @@ aws elbv2 describe-target-health \
 
 ## Cleanup
 
+- Nếu học tiếp ngay step 09 và 10: giữ ALB, target group và ECS service. Hai step sau dùng ALB để kiểm tra app.
+- Nếu tạm dừng hoặc không học tiếp: xóa ALB vì ALB tính phí theo giờ ngay cả khi không có traffic. Có thể scale ECS service về `0` theo step 07.
+
+Thứ tự xóa ALB:
+
 1. Update ECS service để detach target group hoặc delete service.
 2. Delete ALB.
 3. Delete target group.

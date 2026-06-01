@@ -80,7 +80,8 @@ curl -i http://localhost:3000/api/demo-order
 
 ## Cleanup
 
-Dừng server bằng `Ctrl+C`.
+- Nếu học tiếp step 02: dừng server bằng `Ctrl+C`, sau đó chạy lại app với `DATABASE_URL` theo hướng dẫn ở step 02.
+- Nếu dừng tại đây: dừng server bằng `Ctrl+C`.
 
 ## Troubleshooting
 

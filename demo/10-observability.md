@@ -74,6 +74,9 @@ curl -i "http://$ALB_DNS/flow"
 
 ## Cleanup
 
+- Nếu đang kiểm tra alarm và logs: giữ resource cho đến khi test xong.
+- Nếu đã hoàn thành demo: chuyển sang [step 11](11-cleanup-cost-control.md) để cleanup toàn bộ resource theo thứ tự.
+
 Xóa alarm demo:
 
 ```bash

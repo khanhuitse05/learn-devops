@@ -44,6 +44,12 @@ aws sts get-caller-identity
 4. Làm step 9-10 để vận hành đúng hơn: secrets, logs, alarm.
 5. Làm step 11 ngay sau buổi thực hành để dừng chi phí.
 
+Mỗi step có mục `Cleanup`:
+
+- Nếu học tiếp ngay: giữ các resource mà step sau còn cần.
+- Nếu tạm dừng: ưu tiên scale về `0` hoặc xóa resource tính phí theo giờ như RDS, Fargate task và ALB.
+- Khi kết thúc demo: làm step 11 để xóa toàn bộ resource theo đúng thứ tự dependency.
+
 ## Server hoàn chỉnh trước khi demo
 
 `./server` đã là app hoàn chỉnh trước khi bắt đầu roadmap. Trong quá trình học chỉ thay đổi infrastructure, env vars và secret; không cần sửa source code server.

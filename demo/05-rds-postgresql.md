@@ -89,7 +89,8 @@ psql "host=$RDS_ENDPOINT port=5432 dbname=devops_demo user=devops_demo password=
 
 ## Cleanup
 
-Nếu không cần giữ data:
+- Nếu học tiếp: giữ RDS. Step 09 cần endpoint và database để cấu hình `DATABASE_URL` cho ECS task.
+- Nếu tạm dừng hoặc không học tiếp: nên xóa RDS để ngừng phí theo giờ. Lệnh dưới đây xóa DB không tạo final snapshot; chỉ dùng khi không cần giữ data.
 
 ```bash
 aws rds delete-db-instance \

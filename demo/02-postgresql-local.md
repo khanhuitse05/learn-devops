@@ -166,6 +166,9 @@ curl -i \
 
 ## Cleanup
 
+- Nếu học tiếp step 03: dừng app bằng `Ctrl+C`, sau đó xóa container PostgreSQL tạo thủ công để tránh trùng port với Docker Compose.
+- Nếu dừng tại đây: dừng app bằng `Ctrl+C` và xóa container PostgreSQL local.
+
 ```bash
 docker stop learn-devops-demo-postgres
 docker rm learn-devops-demo-postgres

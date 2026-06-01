@@ -95,6 +95,9 @@ nc -vz postgres 5432
 
 ## Cleanup
 
+- Nếu học tiếp step 04: dừng stack local. Các step AWS sau không dùng container local.
+- Nếu dừng tại đây: dừng stack local để giải phóng CPU, RAM và port.
+
 ```bash
 cd server
 docker compose down
@@ -111,4 +114,3 @@ docker compose down -v
 - App chưa start: chạy `docker compose ps` và `docker compose logs postgres` để kiểm tra PostgreSQL healthcheck.
 - `postgres` không resolve: kiểm tra service name trong compose.
 - DB data cũ gây lỗi schema: dùng `docker compose down -v` để reset trong môi trường local.
-

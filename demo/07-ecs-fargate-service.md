@@ -90,7 +90,11 @@ aws logs tail /ecs/learn-devops-demo-node --since 30m
 
 ## Cleanup
 
-Scale về 0 nếu tạm dừng:
+- Nếu học tiếp ngay step 08: giữ ECS service với desired count `1`. Step 08 cần task đang chạy để attach vào target group của ALB.
+- Nếu tạm dừng nhưng sẽ học tiếp: scale desired count về `0` để ngừng phí Fargate. Trước khi học tiếp step 08, scale lại về `1`.
+- Nếu dừng lab: xóa ECS service. Step 11 sẽ cleanup các resource còn lại.
+
+Scale về `0` khi tạm dừng:
 
 ```bash
 aws ecs update-service \
@@ -99,7 +103,7 @@ aws ecs update-service \
   --desired-count 0
 ```
 
-Xóa service khi kết thúc lab:
+Xóa service khi dừng lab:
 
 ```bash
 aws ecs delete-service \
