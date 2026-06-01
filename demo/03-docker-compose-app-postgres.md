@@ -30,6 +30,27 @@ Không dùng AWS Console trong bước này.
 - `server/schema.sql`: được PostgreSQL container apply tự động khi tạo data volume lần đầu.
 - PostgreSQL có healthcheck; app chỉ start sau khi DB healthy.
 
+## `compose.yml`
+
+`compose.yml` hướng dẫn Docker chạy nhiều container cùng nhau. File này thường do DevOps cấu hình dựa trên thông tin từ developer.
+
+Trong lab này:
+
+
+| Config                       | Ý nghĩa                                                                 |
+| ---------------------------- | ----------------------------------------------------------------------- |
+| `services`                   | Có hai container: `app` và `postgres`.                                  |
+| `build` / `image`            | Build app từ `Dockerfile` và dùng image PostgreSQL có sẵn.              |
+| `environment`                | Truyền config vào container, ví dụ user/password DB và `DATABASE_URL`.  |
+| `ports`                      | Mở app tại `localhost:3000` và DB tại `localhost:5432`.                 |
+| `depends_on` + `healthcheck` | Chỉ start app sau khi PostgreSQL sẵn sàng.                              |
+| `volumes`                    | Giữ data DB khi restart và tự chạy `schema.sql` khi tạo volume lần đầu. |
+
+
+Các container gọi nhau bằng service name. Vì vậy app dùng host `postgres`, không dùng `localhost`.
+
+User/password trong file chỉ dùng cho local. Không commit secret thật vào Git.
+
 ## Lệnh CLI kiểm tra/debug
 
 ```bash
@@ -90,3 +111,4 @@ docker compose down -v
 - App chưa start: chạy `docker compose ps` và `docker compose logs postgres` để kiểm tra PostgreSQL healthcheck.
 - `postgres` không resolve: kiểm tra service name trong compose.
 - DB data cũ gây lỗi schema: dùng `docker compose down -v` để reset trong môi trường local.
+
