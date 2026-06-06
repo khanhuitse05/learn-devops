@@ -1,4 +1,4 @@
-# 11 - Cleanup And Cost Control
+# 15 - Cleanup And Cost Control
 
 ## Mục tiêu
 
@@ -14,8 +14,8 @@ Xóa toàn bộ resource demo để ngừng phát sinh chi phí, sau đó kiểm
 ## Kiến thức cần hiểu
 
 - Một số resource phụ thuộc nhau nên phải xóa theo thứ tự.
-- RDS, ALB, NAT Gateway, Fargate là các nguồn chi phí chính trong lab này.
-- ECR, CloudWatch Logs, snapshots, Elastic IP cũng có thể còn chi phí nếu quên.
+- RDS, ALB, NAT Gateway, Fargate, ElastiCache và Amazon Managed Grafana là các nguồn chi phí chính trong lab này.
+- ECR, ElastiCache, Amazon Managed Grafana, CloudWatch Logs, snapshots, Elastic IP cũng có thể còn chi phí nếu quên.
 
 ## Chi phí ước lượng
 
@@ -30,12 +30,14 @@ Bước cleanup giúp giảm chi phí. Sau cleanup, vẫn kiểm tra Billing vì
 - ALB.
 - ECS services đang desired count > 0.
 - ECR images.
+- ElastiCache Redis cluster/subnet group.
+- Amazon Managed Grafana workspace.
 - CloudWatch log groups.
 - Elastic IP unattached.
 
 ## Các bước làm bằng Console
 
-Đây là checklist cleanup tổng hợp cho các resource đã tạo từ step 00 đến step 10. Xóa theo thứ tự:
+Đây là checklist cleanup tổng hợp cho các resource đã tạo từ step 00 đến step 14. Xóa theo thứ tự:
 
 1. ECS: set desired count về `0`, delete service, deregister task definition revision nếu không dùng và delete cluster.
 2. EC2 Load Balancers: delete ALB.
@@ -43,19 +45,23 @@ Bước cleanup giúp giảm chi phí. Sau cleanup, vẫn kiểm tra Billing vì
 4. RDS: delete DB instance, bỏ final snapshot nếu không cần giữ data. Chờ DB bị xóa hoàn toàn trước khi cleanup VPC.
 5. RDS: delete DB subnet group nếu đã tạo riêng cho lab.
 6. ECR: delete repository và image.
-7. Systems Manager Parameter Store: delete `/learn-devops-demo/db-url` nếu đã tạo.
-8. Secrets Manager: delete `learn-devops-demo/db-url` nếu đã tạo.
-9. CloudWatch: delete log group và alarm demo.
-10. IAM: gỡ policy demo khỏi ECS execution role; xóa role nếu role được tạo riêng cho lab và không còn resource nào dùng.
-11. VPC:
+7. ElastiCache: delete Redis cluster/cache, subnet group và security group rule liên quan.
+8. Amazon Managed Grafana: delete workspace demo.
+9. CloudFormation: delete stack demo nếu còn.
+10. Terraform: chạy `terraform destroy` trong workspace lab nếu đã apply.
+11. Systems Manager Parameter Store: delete `/learn-devops-demo/db-url` nếu đã tạo.
+12. Secrets Manager: delete `learn-devops-demo/db-url` nếu đã tạo.
+13. CloudWatch: delete dashboard, log group và alarm demo.
+14. IAM: gỡ policy demo khỏi ECS execution role; xóa role nếu role được tạo riêng cho lab và không còn resource nào dùng.
+15. VPC:
    - Delete NAT Gateway nếu có.
    - Release Elastic IP nếu có.
    - Delete security groups.
    - Delete subnets.
    - Detach/delete Internet Gateway.
    - Delete VPC.
-12. Local Docker: chạy `docker compose down -v` trong `./server` nếu không cần giữ PostgreSQL local.
-13. Billing: kiểm tra Free Tier, Bills, Cost Explorer.
+16. Local Docker: chạy `docker compose down -v` trong `./server` nếu không cần giữ PostgreSQL local.
+17. Billing: kiểm tra Free Tier, Bills, Cost Explorer.
 
 Budget alarm từ step 00 có thể giữ lại để tiếp tục bảo vệ account.
 
@@ -104,6 +110,31 @@ Tìm ECR:
 ```bash
 aws ecr describe-repositories \
   --query 'repositories[?contains(repositoryName, `learn-devops-demo`)].repositoryName' \
+  --output table
+```
+
+Tìm ElastiCache Redis:
+
+```bash
+aws elasticache describe-cache-clusters \
+  --query 'CacheClusters[?contains(CacheClusterId, `learn-devops-demo`)].{Id:CacheClusterId,Status:CacheClusterStatus,Engine:Engine}' \
+  --output table
+```
+
+Tìm Amazon Managed Grafana workspace:
+
+```bash
+aws grafana list-workspaces \
+  --query 'workspaces[?contains(name, `learn-devops-demo`)].{Id:id,Name:name,Status:status}' \
+  --output table
+```
+
+Tìm CloudFormation stack:
+
+```bash
+aws cloudformation list-stacks \
+  --stack-status-filter CREATE_COMPLETE UPDATE_COMPLETE ROLLBACK_COMPLETE \
+  --query 'StackSummaries[?contains(StackName, `learn-devops-demo`)].{Name:StackName,Status:StackStatus}' \
   --output table
 ```
 
@@ -159,14 +190,27 @@ aws cloudwatch describe-alarms \
   --output table
 ```
 
+Tìm CloudWatch dashboard:
+
+```bash
+aws cloudwatch list-dashboards \
+  --dashboard-name-prefix learn-devops-demo \
+  --query 'DashboardEntries[].DashboardName' \
+  --output table
+```
+
 ## Expected result
 
 - Không còn ECS service chạy.
 - Không còn ALB demo.
 - Không còn RDS demo nếu không muốn giữ DB.
 - Không còn ECR repository và image demo.
+- Không còn ElastiCache Redis demo.
+- Không còn Amazon Managed Grafana workspace demo.
+- Không còn CloudFormation stack demo.
+- Không còn Terraform-managed resource demo.
 - Không còn SSM parameter hoặc Secrets Manager secret demo.
-- Không còn CloudWatch log group và alarm demo.
+- Không còn CloudWatch dashboard, log group và alarm demo.
 - Không còn NAT Gateway demo.
 - Không còn Elastic IP không sử dụng.
 - Không còn VPC demo sau khi đã xóa hết dependency.

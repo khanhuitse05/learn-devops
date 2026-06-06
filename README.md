@@ -2,7 +2,7 @@
 
 Hands-on DevOps learning workspace that starts with a local Node.js service and
 gradually deploys it to AWS ECS/Fargate with PostgreSQL/RDS, ECR, ALB, secrets,
-logs, alarms, and cleanup.
+logs, alarms, ElastiCache Redis, Grafana, Infrastructure as Code, and cleanup.
 
 The practical labs are designed around one complete demo app in `server/`.
 During the AWS steps, you should mainly change infrastructure and environment
@@ -89,16 +89,21 @@ Then follow the numbered labs:
 | 07 | [ECS Fargate Service](demo/07-ecs-fargate-service.md) | Run the app container on ECS/Fargate |
 | 08 | [ALB Public Entry](demo/08-alb-public-entry.md) | Public HTTP entry point to ECS |
 | 09 | [Secrets And Environment Variables](demo/09-secrets-and-env.md) | Secrets Manager, SSM, runtime config |
-| 10 | [Observability](demo/10-observability.md) | CloudWatch logs, metrics, and alarms |
-| 11 | [Cleanup And Cost Control](demo/11-cleanup-cost-control.md) | Delete resources and stop ongoing costs |
+| 10 | [Observability](demo/10-observability.md) | CloudWatch logs, metrics, alarms, and dashboards |
+| 11 | [ElastiCache Redis](demo/11-elasticache-redis.md) | Private Redis cache for the ECS app |
+| 12 | [Amazon Managed Grafana](demo/12-amazon-managed-grafana.md) | Grafana dashboards from CloudWatch |
+| 13 | [CloudFormation](demo/13-cloudformation.md) | AWS-native Infrastructure as Code |
+| 14 | [Terraform](demo/14-terraform.md) | Provider-based Infrastructure as Code |
+| 15 | [Cleanup And Cost Control](demo/15-cleanup-cost-control.md) | Delete resources and stop ongoing costs |
 
 Recommended order:
 
 1. Complete steps 00-03 locally and understand the app behavior.
 2. Build the network and database layer with steps 04-05.
 3. Deploy the container through ECR, ECS, and ALB with steps 06-08.
-4. Add production-style configuration and operations with steps 09-10.
-5. Run step 11 as soon as you finish practicing.
+4. Add production-style configuration and operations with steps 09-12.
+5. Practice Infrastructure as Code with steps 13-14.
+6. Run step 15 as soon as you finish practicing.
 
 ## Demo App Endpoints
 
@@ -119,9 +124,10 @@ See [server/README.md](server/README.md) for full local, Docker, PostgreSQL, and
 ## Cost Reminder
 
 Some AWS labs can create paid resources such as RDS, Fargate, ALB, NAT Gateway,
-CloudWatch logs, and Secrets Manager. Use a sandbox account, keep a small budget
-alarm enabled, and clean up resources after each practice session.
+ElastiCache, Amazon Managed Grafana, CloudWatch logs, and Secrets Manager. Use
+a sandbox account, keep a small budget alarm enabled, and clean up resources
+after each practice session.
 
 When in doubt, finish with:
 
-- [Cleanup And Cost Control](demo/11-cleanup-cost-control.md)
+- [Cleanup And Cost Control](demo/15-cleanup-cost-control.md)

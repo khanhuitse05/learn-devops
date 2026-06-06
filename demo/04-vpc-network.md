@@ -248,7 +248,7 @@ VPC_ID=vpc-xxxxxxxxxxxxxxxxx
 ## Cleanup
 
 - Nếu học tiếp: giữ VPC, subnet, route table, Internet Gateway và 3 Security Group. Step 05 dùng private subnet và RDS SG; step 07 dùng private subnet và ECS SG; step 08 dùng public subnet và ALB SG.
-- Nếu dừng tại đây: có thể xóa network vì chưa có RDS, ECS hoặc ALB phụ thuộc vào nó. Làm cleanup tổng hợp theo [step 11](11-cleanup-cost-control.md).
+- Nếu dừng tại đây: có thể xóa network vì chưa có RDS, ECS hoặc ALB phụ thuộc vào nó. Làm cleanup tổng hợp theo [step 15](15-cleanup-cost-control.md).
 - Không xóa network giữa chừng sau khi đã tạo RDS, ECS hoặc ALB. Phải xóa các resource phụ thuộc trước.
 
 ## Troubleshooting

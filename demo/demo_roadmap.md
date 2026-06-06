@@ -1,6 +1,6 @@
 # AWS Demo Roadmap
 
-Roadmap này dùng repo `learn-devops` để thực hành AWS theo hướng Console + CLI. Mục tiêu là đi từ app Node.js local trong `./server` đến một backend chạy trên ECS/Fargate, có image trên ECR, public qua ALB, kết nối PostgreSQL/RDS, có secrets, logs, alarm và cleanup rõ ràng.
+Roadmap này dùng repo `learn-devops` để thực hành AWS theo hướng Console + CLI. Mục tiêu là đi từ app Node.js local trong `./server` đến một backend chạy trên ECS/Fargate, có image trên ECR, public qua ALB, kết nối PostgreSQL/RDS, thêm cache Redis bằng ElastiCache, có secrets, CloudWatch, Grafana, Infrastructure as Code và cleanup rõ ràng.
 
 Ưu tiên của toàn bộ demo:
 
@@ -40,22 +40,27 @@ aws sts get-caller-identity
 | 7 | [07-ecs-fargate-service.md](07-ecs-fargate-service.md) | ECS/Fargate | Chạy container app | ECS task/service healthy | Fargate tính phí theo vCPU/RAM/giờ | Stop/delete service sau lab |
 | 8 | [08-alb-public-entry.md](08-alb-public-entry.md) | ALB | Public HTTP entry vào ECS | ALB DNS gọi được `/health` | ALB tính phí theo giờ + LCU | Delete ALB sau lab |
 | 9 | [09-secrets-and-env.md](09-secrets-and-env.md) | Secrets Manager, SSM | Quản lý DB config | Task lấy secret/env an toàn | Secrets Manager tính phí theo secret/tháng | Có thể dùng SSM để tiết kiệm |
-| 10 | [10-observability.md](10-observability.md) | CloudWatch | Logs, metrics, alarm | Log group, alarm cơ bản | Logs/alarms có phí nhỏ | Xóa alarm/log group |
-| 11 | [11-cleanup-cost-control.md](11-cleanup-cost-control.md) | Billing, all services | Xóa resource và kiểm tra bill | Không còn resource demo chạy | Giúp ngừng phát sinh phí | Làm ngay sau khi học xong |
+| 10 | [10-observability.md](10-observability.md) | CloudWatch | Logs, metrics, alarm, dashboard | Log group, metric view, alarm cơ bản | Logs/alarms có phí nhỏ | Xóa alarm/log group |
+| 11 | [11-elasticache-redis.md](11-elasticache-redis.md) | ElastiCache Redis | Thêm cache private cho app | Redis cluster private, ECS task có env cache | ElastiCache tính phí theo node/giờ | Chọn Redis thay EFS vì app đã mô phỏng cache |
+| 12 | [12-amazon-managed-grafana.md](12-amazon-managed-grafana.md) | Amazon Managed Grafana | Dashboard từ CloudWatch metrics/logs | Workspace Grafana, CloudWatch data source | Grafana workspace/user có phí | Xóa workspace sau lab |
+| 13 | [13-cloudformation.md](13-cloudformation.md) | AWS CloudFormation | Học IaC native của AWS | Template tạo resource nhỏ có tag demo | Stack resource có thể phát sinh phí | Delete stack khi xong |
+| 14 | [14-terraform.md](14-terraform.md) | Terraform | Học IaC đa cloud/provider AWS | Terraform plan/apply/destroy cho resource nhỏ | Resource tạo bởi Terraform có phí | Luôn chạy destroy sau lab |
+| 15 | [15-cleanup-cost-control.md](15-cleanup-cost-control.md) | Billing, all services | Xóa resource và kiểm tra bill | Không còn resource demo chạy | Giúp ngừng phát sinh phí | Làm ngay sau khi học xong |
 
 ## Recommended Flow
 
 1. Làm step 0-3 hoàn toàn local để hiểu app và database.
 2. Làm step 4-5 để hiểu private network và RDS.
 3. Làm step 6-8 để deploy container lên ECS và expose qua ALB.
-4. Làm step 9-10 để vận hành đúng hơn: secrets, logs, alarm.
-5. Làm step 11 ngay sau buổi thực hành để dừng chi phí.
+4. Làm step 9-12 để vận hành đúng hơn: secrets, CloudWatch, ElastiCache Redis và Grafana.
+5. Làm step 13-14 để hiểu Infrastructure as Code bằng CloudFormation và Terraform.
+6. Làm step 15 ngay sau buổi thực hành để dừng chi phí.
 
 Mỗi step có mục `Cleanup`:
 
 - Nếu học tiếp ngay: giữ các resource mà step sau còn cần.
 - Nếu tạm dừng: ưu tiên scale về `0` hoặc xóa resource tính phí theo giờ như RDS, Fargate task và ALB.
-- Khi kết thúc demo: làm step 11 để xóa toàn bộ resource theo đúng thứ tự dependency.
+- Khi kết thúc demo: làm step 15 để xóa toàn bộ resource theo đúng thứ tự dependency.
 
 ## Server hoàn chỉnh trước khi demo
 
@@ -87,4 +92,4 @@ Khi chuyển từ local PostgreSQL sang RDS, chỉ đổi `DATABASE_URL` hoặc 
 - Các lệnh dùng prefix `learn-devops-demo-*` để dễ cleanup.
 - RDS không mở public access.
 - Không có bước nào yêu cầu sửa source code server trong lúc thực hành.
-- Người học có thể đi theo thứ tự: local app -> PostgreSQL local -> Docker -> VPC/RDS -> ECR -> ECS -> ALB -> secrets/logs -> cleanup.
+- Người học có thể đi theo thứ tự: local app -> PostgreSQL local -> Docker -> VPC/RDS -> ECR -> ECS -> ALB -> secrets -> CloudWatch -> ElastiCache Redis -> Grafana -> CloudFormation -> Terraform -> cleanup.

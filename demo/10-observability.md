@@ -2,7 +2,7 @@
 
 ## Mục tiêu
 
-Theo dõi app bằng CloudWatch Logs, metric cơ bản và alarm để biết service có chạy ổn không.
+Theo dõi app bằng CloudWatch Logs, metrics, alarm và dashboard cơ bản để biết service có chạy ổn không.
 
 ## Prerequisites
 
@@ -16,6 +16,7 @@ Theo dõi app bằng CloudWatch Logs, metric cơ bản và alarm để biết se
 - Container nên log ra stdout/stderr.
 - ECS awslogs driver gửi log vào CloudWatch Logs.
 - ALB có metric target response, 4xx, 5xx.
+- CloudWatch Dashboard gom metric quan trọng vào một màn hình.
 - Alarm giúp cảnh báo khi service unhealthy hoặc error tăng.
 
 ## Chi phí ước lượng
@@ -37,7 +38,8 @@ Log group để lâu có thể tích lũy storage. Đặt retention ngắn, ví 
 5. Vào CloudWatch Metrics.
 6. Xem ECS service metrics: CPU, memory.
 7. Xem ALB target group metrics: healthy host count, HTTP 5xx.
-8. Tạo alarm đơn giản:
+8. Tạo dashboard `learn-devops-demo-dashboard` với CPU, memory, healthy host count và ALB 5xx.
+9. Tạo alarm đơn giản:
    - ECS running task count < 1.
    - Hoặc ALB target 5xx > 0 trong vài phút.
 
@@ -66,6 +68,13 @@ aws cloudwatch describe-alarms \
   --output table
 ```
 
+Liệt kê dashboards:
+
+```bash
+aws cloudwatch list-dashboards \
+  --dashboard-name-prefix learn-devops-demo
+```
+
 Test app log qua ALB:
 
 ```bash
@@ -77,12 +86,14 @@ curl -i "http://$ALB_DNS/flow"
 
 - CloudWatch Logs có request logs từ app.
 - Log retention không để mặc định never expire.
+- Có dashboard demo hoặc biết cách tạo dashboard từ metric.
 - Có ít nhất một alarm demo hoặc biết cách tạo alarm từ metric.
 
 ## Cleanup
 
 - Nếu đang kiểm tra alarm và logs: giữ resource cho đến khi test xong.
-- Nếu đã hoàn thành demo: chuyển sang [step 11](11-cleanup-cost-control.md) để cleanup toàn bộ resource theo thứ tự.
+- Nếu học tiếp: chuyển sang [step 11](11-elasticache-redis.md) để thêm cache Redis private.
+- Nếu đã hoàn thành demo: chuyển sang [step 15](15-cleanup-cost-control.md) để cleanup toàn bộ resource theo thứ tự.
 
 Xóa alarm demo:
 
@@ -96,6 +107,13 @@ Xóa log group sau khi xóa ECS service:
 ```bash
 aws logs delete-log-group \
   --log-group-name /ecs/learn-devops-demo-node
+```
+
+Xóa dashboard demo:
+
+```bash
+aws cloudwatch delete-dashboards \
+  --dashboard-names learn-devops-demo-dashboard
 ```
 
 ## Troubleshooting
