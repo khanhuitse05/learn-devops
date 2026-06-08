@@ -4,6 +4,10 @@
 
 Học Terraform với AWS provider: init, plan, apply, inspect state và destroy bằng một resource nhỏ, dễ cleanup.
 
+## Terraform là gì?
+
+Terraform là công cụ Infrastructure as Code dùng để mô tả hạ tầng bằng file config. Bạn khai báo resource mong muốn, Terraform preview thay đổi bằng `plan`, tạo/cập nhật bằng `apply`, và lưu mapping giữa code với resource thật trong state file.
+
 ## Prerequisites
 
 - Đã hoàn thành [step 00](00-prerequisites.md): AWS CLI chạy đúng account/region.
@@ -25,16 +29,7 @@ Terraform không tính phí riêng, nhưng resource được tạo bởi Terrafo
 
 Luôn chạy `terraform plan` trước `apply` và `terraform destroy` sau lab. Không commit secret hoặc state có sensitive value.
 
-## Các bước làm bằng Console
-
-Terraform chủ yếu chạy bằng CLI. Dùng Console để kiểm tra resource sau khi apply:
-
-1. Vào Systems Manager Parameter Store.
-2. Tìm `/learn-devops-demo/terraform-note`.
-3. Xác nhận tag `Project=learn-devops-demo`.
-4. Sau `terraform destroy`, refresh Console và xác nhận parameter đã biến mất.
-
-## Lệnh CLI kiểm tra/debug
+## Các bước làm bằng CLI
 
 Tạo thư mục lab tạm:
 
@@ -87,7 +82,13 @@ terraform plan
 terraform apply
 ```
 
-Kiểm tra resource:
+Kiểm tra state Terraform:
+
+```bash
+terraform state list
+```
+
+Kiểm tra resource bằng AWS CLI:
 
 ```bash
 aws ssm get-parameter \
@@ -95,11 +96,22 @@ aws ssm get-parameter \
   --query 'Parameter.{Name:Name,Value:Value}'
 ```
 
+## Kiểm tra bằng Console
+
+Sau khi `terraform apply` thành công, dùng Console để kiểm tra resource:
+
+1. Đảm bảo Console đang ở đúng region trong file Terraform, mặc định là `ap-southeast-1`.
+2. Vào Systems Manager Parameter Store.
+3. Tìm `/learn-devops-demo/terraform-note`.
+4. Xác nhận tag `Project=learn-devops-demo`.
+
 Destroy sau lab:
 
 ```bash
 terraform destroy
 ```
+
+Sau `terraform destroy`, refresh Console và xác nhận parameter đã biến mất.
 
 ## Expected result
 
