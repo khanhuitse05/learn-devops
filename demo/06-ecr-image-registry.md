@@ -15,7 +15,7 @@ Build Docker image hoàn chỉnh từ `./server` và push lên Amazon ECR để 
 ## Kiến thức cần hiểu
 
 - ECR repository lưu Docker image.
-- Image đã chứa app health, flow demo và PostgreSQL endpoints.
+- Image đã chứa app health, flow demo, `/test-error` và PostgreSQL endpoints.
 - ECS task definition nên dùng image tag cụ thể, ví dụ commit SHA hoặc version.
 - `latest` tiện cho lab nhưng không tốt cho rollback production.
 - ECR storage tính phí theo dung lượng image.
@@ -109,6 +109,6 @@ aws ecr delete-repository \
 
 ## Troubleshooting
 
-- Docker login fail: kiểm tra region và account ID.
+- Docker login không thành công: kiểm tra region và account ID.
 - Push denied: IAM user/role thiếu quyền ECR.
-- ECS pull image fail sau này: kiểm tra ECS execution role có quyền `AmazonECSTaskExecutionRolePolicy`.
+- ECS pull image lỗi sau này: kiểm tra ECS execution role có quyền `AmazonECSTaskExecutionRolePolicy`.

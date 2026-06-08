@@ -128,6 +128,6 @@ Sau `terraform destroy`, refresh Console và xác nhận parameter đã biến m
 
 ## Troubleshooting
 
-- Provider download fail: kiểm tra network và version constraint.
-- Apply fail vì name tồn tại: resource có thể đã được tạo từ lần trước, xóa parameter hoặc đổi name.
+- Provider download lỗi: kiểm tra network và version constraint.
+- Apply lỗi vì name tồn tại: resource có thể đã được tạo từ lần trước, xóa parameter hoặc đổi name.
 - Destroy không xóa hết: chạy `terraform state list` và kiểm tra resource còn trong state.

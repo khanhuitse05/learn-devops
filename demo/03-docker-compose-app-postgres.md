@@ -35,7 +35,7 @@ Không dùng AWS Console trong bước này.
 
 - `server/compose.yml`: chạy app và PostgreSQL.
 - `server/schema.sql`: được PostgreSQL container apply tự động khi tạo data volume lần đầu.
-- PostgreSQL có healthcheck; app chỉ start sau khi DB healthy.
+- PostgreSQL có health check; app chỉ start sau khi DB healthy.
 
 ## `compose.yml`
 
@@ -118,6 +118,6 @@ docker compose down -v
 
 ## Troubleshooting
 
-- App chưa start: chạy `docker compose ps` và `docker compose logs postgres` để kiểm tra PostgreSQL healthcheck.
+- App chưa start: chạy `docker compose ps` và `docker compose logs postgres` để kiểm tra PostgreSQL health check.
 - `postgres` không resolve: kiểm tra service name trong compose.
 - DB data cũ gây lỗi schema: dùng `docker compose down -v` để reset trong môi trường local.

@@ -67,7 +67,7 @@ Cần học:
 Bài thực hành nên làm:
 
 1. Cài Ubuntu VM hoặc dùng EC2 nhỏ; luyện các lệnh: ls, cd, grep, find, tail, systemctl, journalctl, ss/netstat, df, du, top/htop.  
-2. Tạo một service systemd chạy Node/Rails/Python app demo và đọc log khi service fail.  
+2. Tạo một service systemd chạy Node/Rails/Python app demo và đọc log khi service lỗi.
 3. Tạo Git repo demo, build một flow release: feature branch → PR → merge → tag.
 
 Link học chi tiết:
@@ -127,7 +127,7 @@ Link học chi tiết:
 
 ## **M3. AWS account, AWS CLI và IAM**
 
-**Mục tiêu:** Trước khi deploy, bạn phải hiểu identity, permission và thao tác bằng CLI. IAM sai có thể gây lộ dữ liệu hoặc làm pipeline/deploy fail.
+**Mục tiêu:** Trước khi deploy, bạn phải hiểu identity, permission và thao tác bằng CLI. IAM sai có thể gây lộ dữ liệu hoặc làm pipeline/deploy lỗi.
 
 Cần học:
 
@@ -201,7 +201,7 @@ Bài thực hành nên làm:
 18. Tạo Route 53 alias record trỏ domain/subdomain vào ALB.  
 19. Tạo API Gateway route /health proxy đến backend demo.
 
-| Lưu ý production Sai health check path hoặc target group port có thể làm ECS service liên tục unhealthy. Sai DNS/certificate có thể làm HTTPS fail hoặc client app không gọi được API. |
+| Lưu ý production Sai health check path hoặc target group port có thể làm ECS service liên tục unhealthy. Sai DNS/certificate có thể làm HTTPS lỗi hoặc client app không gọi được API. |
 | :---- |
 
 Link học chi tiết:
@@ -251,7 +251,7 @@ Bài thực hành nên làm:
 
 23. Deploy một web service Fargate sau ALB.  
 24. Deploy một worker service không public endpoint.  
-25. Debug task fail bằng stopped reason, CloudWatch logs, ECS Exec.  
+25. Debug task lỗi bằng stopped reason, CloudWatch logs, ECS Exec.
 26. Thực hành update image tag và rollback về revision trước.
 
 | Lưu ý production Không tăng desired count hoặc CPU/memory bừa bãi trên production vì có thể tăng cost nhanh. Khi update task definition cần kiểm tra env/secrets/port/log group trước khi deploy. |
@@ -388,7 +388,7 @@ Bài thực hành nên làm:
 42. Tạo GitHub Actions build image và push ECR.  
 43. Update ECS task definition image tag rồi deploy service.  
 44. Tạo CodePipeline ECS standard deployment hoặc blue/green demo.  
-45. Thêm step notify Slack/SNS khi deploy success/fail.
+45. Thêm step notify Slack/SNS khi deploy success/failure.
 
 | Lưu ý production Pipeline production cần manual approval hoặc canary/blue-green cho service quan trọng. Không để secret dạng plain text trong repo hoặc build logs. |
 | :---- |
@@ -416,9 +416,10 @@ Cần học:
 Bài thực hành nên làm:
 
 46. Tạo dashboard gồm ALB 5xx, ECS CPU/memory, task count, RDS connections, Redis memory.  
-47. Tạo alarms: ALB 5xx \> threshold, ECS task stopped, RDS free storage low.  
-48. Tìm trong CloudTrail sự kiện update security group hoặc delete resource.  
-49. Viết runbook 1 trang cho lỗi 502/503 từ ALB.
+47. Dùng endpoint `/test-error` của app demo để tạo HTTP 500 data mà không làm task crash.
+48. Tạo alarms: ALB 5xx \> threshold, ECS task stopped, RDS free storage low.
+49. Tìm trong CloudTrail sự kiện update security group hoặc delete resource.
+50. Viết runbook 1 trang cho lỗi 502/503 từ ALB.
 
 Link học chi tiết:
 
@@ -441,10 +442,10 @@ Cần học:
 
 Bài thực hành nên làm:
 
-50. Move hardcoded database password to Secrets Manager.  
-51. Use KMS encryption for RDS/EFS/secrets/logs where applicable.  
-52. Create backup policy and run a restore test.  
-53. Create monthly cost checklist: NAT, RDS, ECS, EBS snapshots, CloudWatch logs.
+51. Move hardcoded database password to Secrets Manager.
+52. Use KMS encryption for RDS/EFS/secrets/logs where applicable.
+53. Create backup policy and run a restore test.
+54. Create monthly cost checklist: NAT, RDS, ECS, EBS snapshots, CloudWatch logs.
 
 | Lưu ý production Xóa resource nhầm, rotate secret sai, hoặc đổi KMS key policy sai có thể làm app mất quyền decrypt/connect. Luôn test ở dev và chuẩn bị rollback trước khi làm production. |
 | :---- |
@@ -469,12 +470,12 @@ Cần học:
 
 Bài thực hành nên làm:
 
-54. Dựng VPC 2 AZ \+ ALB \+ ECS Fargate web service.  
-55. Build/push image lên ECR bằng pipeline.  
-56. ECS service connect RDS/Redis, worker service xử lý job demo.  
-57. CloudFormation root stack \+ nested stacks theo build order.  
-58. CloudWatch dashboard \+ 3 alarms \+ SNS notification.  
-59. Restore drill: backup RDS → restore dev DB → verify app connect.
+55. Dựng VPC 2 AZ \+ ALB \+ ECS Fargate web service.
+56. Build/push image lên ECR bằng pipeline.
+57. ECS service connect RDS/Redis, worker service xử lý job demo.
+58. CloudFormation root stack \+ nested stacks theo build order.
+59. CloudWatch dashboard \+ 3 alarms \+ SNS notification.
+60. Restore drill: backup RDS → restore dev DB → verify app connect.
 
 Link học chi tiết:
 

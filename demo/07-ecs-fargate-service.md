@@ -126,7 +126,7 @@ Tạo ECS service để chạy task liên tục:
 7. Giữ các mục còn lại mặc định, chọn **Create**.
 8. Chờ service chuyển sang trạng thái có **Desired tasks = 1** và **Running tasks = 1**.
 
-Chưa inject `DATABASE_URL` plain text trong bước này. `/health` vẫn hoạt động; các endpoint DB sẽ kết nối RDS sau khi cấu hình secret ở step 09.
+Chưa inject `DATABASE_URL` dạng plain text trong bước này. `/health` vẫn hoạt động; các endpoint DB sẽ kết nối RDS sau khi cấu hình secret ở step 09.
 
 ## Lệnh CLI kiểm tra/debug
 
@@ -165,7 +165,7 @@ aws ecs describe-services \
   --output table
 ```
 
-Xem stopped reason nếu task fail:
+Xem stopped reason nếu task lỗi:
 
 ```bash
 aws ecs list-tasks \
@@ -224,7 +224,7 @@ aws ecs delete-service \
 - Create cluster báo `Unable to assume the service linked role`: kiểm tra role `AWSServiceRoleForECS`. Nếu chưa có, tạo bằng `aws iam create-service-linked-role --aws-service-name ecs.amazonaws.com`. Nếu lệnh bị `AccessDenied`, IAM user/role hiện tại thiếu quyền `iam:CreateServiceLinkedRole`.
 - ECS Console mở CloudFormation và báo `ECSService` `CREATE_FAILED`: đây chưa phải lỗi gốc. Vào tab **Events**, mở dòng `ECSService`, xem **Status reason**. Các nguyên nhân hay gặp: chưa bật **Public IP** khi dùng public subnet, còn chọn nhầm private subnet nhưng không có NAT/VPC endpoints, task execution role thiếu quyền ECR/CloudWatch Logs, hoặc log group chưa tồn tại mà role không có quyền tạo log group.
 - Task dừng ngay: xem ECS stopped reason và CloudWatch logs.
-- Pull image fail: kiểm tra ECR URI và execution role.
+- Pull image lỗi: kiểm tra ECR URI và execution role.
 - Không có logs: kiểm tra task execution role và log group.
 - App không listen: image phải dùng `HOST=0.0.0.0` và `PORT=3000`.
-- `/api/db/health` trả HTTP 503 trước step 09: đây là expected result vì task chưa nhận `DATABASE_URL`.
+- `/api/db/health` trả HTTP 503 trước step 09: đây là kết quả mong đợi vì task chưa nhận `DATABASE_URL`.

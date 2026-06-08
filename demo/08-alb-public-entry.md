@@ -2,7 +2,7 @@
 
 ## Mục tiêu
 
-Tạo Application Load Balancer public để truy cập app ECS qua HTTP và test `/health`, `/flow`, `/api/demo-order`.
+Tạo Application Load Balancer public để truy cập app ECS qua HTTP và test `/health`, `/flow`, `/api/demo-order`, `/test-error`.
 
 ## Prerequisites
 
@@ -27,7 +27,7 @@ Tạo Application Load Balancer public để truy cập app ECS qua HTTP và tes
 
 ## Cảnh báo service tốn tiền
 
-ALB tốn phí ngay cả khi không có traffic. Delete ALB sau khi demo xong.
+ALB tốn phí ngay cả khi không có traffic. Xóa ALB sau khi demo xong.
 
 ## Các bước làm bằng Console
 
@@ -112,9 +112,13 @@ ALB_DNS=$(aws elbv2 describe-load-balancers \
 curl -i "http://$ALB_DNS/health"
 curl -i "http://$ALB_DNS/flow"
 curl -i "http://$ALB_DNS/api/demo-order"
+curl -i "http://$ALB_DNS/test-error"
+curl -i "http://$ALB_DNS/health"
 ```
 
-Các endpoint PostgreSQL đã tồn tại trong image nhưng chưa cần pass ở bước này. Sau khi inject `DATABASE_URL` trong step 09, test thêm:
+`/test-error` trả HTTP `500` có chủ đích để tạo dữ liệu 5xx cho step 10, nhưng app vẫn sống nên `/health` phải tiếp tục trả HTTP `200`.
+
+Các endpoint PostgreSQL đã tồn tại trong image nhưng chưa cần trả HTTP 200 ở bước này. Sau khi inject `DATABASE_URL` trong step 09, test thêm:
 
 ```bash
 curl -i "http://$ALB_DNS/api/db/health"
@@ -139,6 +143,7 @@ aws elbv2 describe-target-health \
 - ALB DNS trả HTTP 200 cho `/health`.
 - Target group health là `healthy`.
 - `/flow` cho thấy entry layer có thể mô phỏng ALB.
+- `/test-error` trả HTTP 500 có chủ đích và không làm target unhealthy.
 - Không cần sửa code server khi attach ALB.
 
 ## Cleanup
@@ -149,8 +154,8 @@ aws elbv2 describe-target-health \
 Thứ tự xóa ALB:
 
 1. Update ECS service để detach target group hoặc delete service.
-2. Delete ALB.
-3. Delete target group.
+2. Xóa ALB.
+3. Xóa target group.
 
 CLI:
 
@@ -172,4 +177,4 @@ aws elbv2 delete-target-group --target-group-arn YOUR_TARGET_GROUP_ARN
 
 - Target unhealthy: kiểm tra `/health`, port 3000, ECS SG inbound từ ALB SG.
 - ALB 502: app không listen đúng port hoặc task bị restart.
-- ALB timeout: route/Security Group sai hoặc task không reachable.
+- ALB timeout: route/Security Group sai hoặc task không reachable từ ALB.

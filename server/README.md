@@ -26,6 +26,7 @@ curl http://localhost:3000/
 curl http://localhost:3000/health
 curl http://localhost:3000/flow
 curl http://localhost:3000/api/demo-order
+curl http://localhost:3000/test-error
 ```
 
 The app process can start without PostgreSQL. In that case `/health` still
@@ -42,6 +43,7 @@ returns HTTP `200`, while `/api/db/health` returns HTTP `503`.
 | `GET /api/orders` | Read real PostgreSQL orders |
 | `GET /api/orders/:id` | Read one real PostgreSQL order |
 | `POST /api/orders` | Create one real PostgreSQL order |
+| `GET /test-error` | Intentional HTTP 500 for logs, metrics, dashboards, and alarms |
 | `GET /crash` | Intentional process failure for restart practice |
 
 ## Run with Local PostgreSQL
@@ -180,6 +182,15 @@ DEMO_REDIS_STATUS=down node app.js
 DEMO_EFS_STATUS=down node app.js
 ```
 
+Generate a safe HTTP 500 without stopping the app:
+
+```bash
+curl -i http://localhost:3000/test-error
+curl -i http://localhost:3000/health
+```
+
+`/test-error` is useful for CloudWatch, ALB 5xx, dashboard, and alarm demos. It returns HTTP `500` but keeps the process alive. Use `/crash` only when you want to practice process restart behavior.
+
 Useful lesson mapping:
 
 | Flow step | Local demo signal |
@@ -189,6 +200,7 @@ Useful lesson mapping:
 | ALB/API Gateway | `X-Demo-Entry-Layer: AWS ALB` |
 | ECS service | `ECS_SERVICE_NAME` and `ECS_TASK_ID` env vars |
 | RDS/Redis/EFS | `/api/demo-order` dependencies |
+| Error signal | `/test-error` HTTP 500 without process crash |
 | Response path | HTTP response from `curl -i` |
 
 ## Install as a Systemd Service on Ubuntu
@@ -263,6 +275,16 @@ Show only errors:
 
 ```bash
 journalctl -u devops-demo-node -p err
+```
+
+## Practice: Make the Service Return HTTP 500
+
+The `/test-error` endpoint returns an intentional HTTP `500` without stopping the process. Use it for log, metric, dashboard, and alarm practice.
+
+```bash
+curl http://localhost:3000/test-error
+journalctl -u devops-demo-node -p err -n 20
+curl http://localhost:3000/health
 ```
 
 ## Practice: Make the Service Fail
@@ -356,9 +378,10 @@ docker logs devops-demo-node
 docker logs -f devops-demo-node
 ```
 
-Practice a crash:
+Practice an HTTP 500 and then a crash:
 
 ```bash
+curl http://localhost:3000/test-error
 curl http://localhost:3000/crash
 docker ps -a
 docker logs devops-demo-node
@@ -415,6 +438,7 @@ curl http://localhost:3000/health
 Practice service failure:
 
 ```bash
+curl http://localhost:3000/test-error
 curl http://localhost:3000/crash
 systemctl status devops-demo-node-docker
 journalctl -u devops-demo-node-docker -n 100

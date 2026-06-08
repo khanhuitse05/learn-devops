@@ -167,4 +167,4 @@ aws secretsmanager delete-secret \
 
 - Task không start vì secret access denied: kiểm tra execution role permission.
 - App nhận env rỗng: kiểm tra mapping secret trong task definition.
-- RDS auth fail: secret value sai password, host hoặc database name.
+- RDS auth lỗi: secret value sai password, host hoặc database name.

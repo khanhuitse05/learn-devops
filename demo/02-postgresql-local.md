@@ -189,4 +189,4 @@ Nếu muốn xóa toàn bộ data volume do Docker tạo, kiểm tra volume trư
 - `Conflict. The container name ... is already in use`: container đã được tạo trước đó. Dùng `docker start learn-devops-demo-postgres`, hoặc xóa container cũ nếu muốn tạo lại.
 - `port is already allocated`: máy đã có PostgreSQL chạy trên 5432, đổi port host sang `5433:5432`.
 - `password authentication failed`: kiểm tra user/password trong `DATABASE_URL`.
-- App health OK nhưng DB health fail: đây là đúng thiết kế, debug DB riêng.
+- App health OK nhưng DB health lỗi: đây là đúng thiết kế, debug DB riêng.

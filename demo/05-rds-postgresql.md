@@ -143,5 +143,5 @@ aws rds describe-db-instances \
 
 - `could not translate host name ... to address`: kiểm tra RDS đã có status `available` chưa và lấy lại endpoint bằng lệnh CLI phía trên. Endpoint có thể chưa dùng được khi instance còn đang `creating`.
 - Timeout khi connect: RDS SG chưa cho phép source SG, hoặc client không ở cùng VPC/private route.
-- Auth fail: kiểm tra username, password, database name.
+- Auth lỗi: kiểm tra username, password, database name.
 - SSL issue: thử thêm `sslmode=require`.

@@ -18,6 +18,7 @@ Chạy server hoàn chỉnh trong `./server` và hiểu các endpoint trước k
 - `/flow` giúp học request path.
 - `/api/demo-order` mô phỏng RDS/Redis/EFS để học dependency failure.
 - `/api/db/health` và `/api/orders` gọi PostgreSQL thật khi database đã được cấu hình.
+- `/test-error` tạo HTTP 500 có kiểm soát để demo logs, metrics và alarm mà không làm process chết.
 - App process vẫn chạy khi PostgreSQL chưa sẵn sàng.
 
 ## Chi phí ước lượng
@@ -50,6 +51,7 @@ curl -i http://localhost:3000/
 curl -i http://localhost:3000/health
 curl -i http://localhost:3000/flow
 curl -i http://localhost:3000/api/demo-order
+curl -i http://localhost:3000/test-error
 curl -i http://localhost:3000/api/db/health
 ```
 
@@ -65,7 +67,7 @@ curl -i \
   http://localhost:3000/flow
 ```
 
-Sau khi dừng server cũ bằng `Ctrl+C`, mô phỏng dependency fail:
+Sau khi dừng server cũ bằng `Ctrl+C`, mô phỏng dependency failure:
 
 ```bash
 DEMO_RDS_STATUS=down node app.js
@@ -82,7 +84,8 @@ curl -i http://localhost:3000/api/demo-order
 - `/health` trả HTTP 200.
 - `/flow` trả JSON mô tả DNS/TLS/ALB/ECS.
 - `/api/demo-order` trả `status: ok` khi dependency env là `ok`.
-- `/api/db/health` trả HTTP 503 ở bước này vì chưa chạy PostgreSQL. Đây là expected result.
+- `/test-error` trả HTTP 500 có chủ đích và server vẫn tiếp tục chạy.
+- `/api/db/health` trả HTTP 503 ở bước này vì chưa chạy PostgreSQL. Đây là kết quả mong đợi.
 - Khi `DEMO_RDS_STATUS=down`, `/api/demo-order` trả HTTP 503.
 
 ## Cleanup

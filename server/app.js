@@ -331,6 +331,22 @@ async function handleRequest(req, res) {
     throw new HttpError(405, "Only GET and POST are supported for orders.");
   }
 
+  if (req.method === "GET" && pathname === "/test-error") {
+    log("error", "intentional test error requested", {
+      endpoint: "/test-error",
+      purpose: "Generate HTTP 500 data for logs, metrics, dashboards, and alarms.",
+    });
+    sendJson(res, 500, {
+      status: "test_error",
+      message: "Intentional HTTP 500 for log, metric, dashboard, and alarm demos.",
+    });
+    return;
+  }
+
+  if (pathname === "/test-error") {
+    throw new HttpError(405, "Only GET is supported for the test error demo.");
+  }
+
   if (pathname === "/crash") {
     log("error", "manual crash requested from /crash endpoint");
     sendJson(res, 500, { status: "crashing" });
@@ -343,7 +359,7 @@ async function handleRequest(req, res) {
 
   res.writeHead(200, { "content-type": "text/plain" });
   res.end(
-    "Hello from devops-demo-node. Try /health, /flow, /api/demo-order, /api/db/health, /api/orders, or /crash\n"
+    "Hello from devops-demo-node. Try /health, /flow, /api/demo-order, /api/db/health, /api/orders, /test-error, or /crash\n"
   );
 }
 

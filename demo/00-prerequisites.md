@@ -4,6 +4,14 @@
 
 Chuẩn bị AWS account an toàn trước khi tạo bất kỳ resource nào. Sau bước này bạn có AWS CLI chạy được, biết region đang dùng, có budget alarm và naming convention để cleanup.
 
+## Trainer Notes
+
+- Giữ AWS region nhất quán trong toàn bộ demo, mặc định là `ap-southeast-1`.
+- Dùng resource prefix `learn-devops-demo-*` để dễ cleanup.
+- Không public expose database hoặc cache.
+- Các lab sau có thể tạo resource tính phí: RDS, Fargate, ALB, ElastiCache, Grafana, CloudWatch và Secrets Manager.
+- Sau mỗi buổi thực hành, kết thúc bằng [15 - Cleanup And Cost Control](15-cleanup-cost-control.md).
+
 ## Prerequisites
 
 - Có AWS account và quyền truy cập AWS Console.
