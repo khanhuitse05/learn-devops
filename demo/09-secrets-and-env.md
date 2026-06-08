@@ -15,7 +15,7 @@ Inject RDS connection string vào server image có sẵn mà không sửa code h
 ## Kiến thức cần hiểu
 
 - Env var thường hiện trong task definition revision, không nên chứa password plain text.
-- SSM Parameter Store SecureString có thể đủ cho lab tiết kiệm.
+- SSM Parameter Store `String` dễ làm theo lab nhưng lưu value dạng unencrypted; `SecureString` an toàn hơn nếu muốn mã hóa bằng KMS.
 - Secrets Manager có tính năng secret lifecycle/rotation tốt hơn nhưng tính phí theo secret.
 - ECS task execution role cần quyền đọc secret/parameter.
 - App đã đọc `DATABASE_URL`; bước này chỉ cấu hình runtime.
@@ -31,17 +31,55 @@ Secrets Manager có phí định kỳ theo secret. Với lab tiết kiệm, dùn
 
 ## Các bước làm bằng Console
 
-Phương án tiết kiệm với SSM:
+Phương án tiết kiệm với SSM theo màn hình Create parameter:
 
 1. Vào Systems Manager -> Parameter Store.
 2. Create parameter.
 3. Name: `/learn-devops-demo/db-url`.
-4. Type: SecureString.
-5. Value: PostgreSQL connection string tới RDS.
-6. Save.
-7. Vào IAM, thêm quyền đọc parameter cho ECS task execution role.
-8. Update ECS task definition để inject secret vào env var `DATABASE_URL`.
-9. Deploy revision mới.
+4. Description: để trống.
+5. Tier: chọn `Standard`.
+6. Type: chọn `String`.
+7. Data type: giữ `text`.
+8. Value: PostgreSQL connection string tới RDS, ví dụ:
+
+   ```text
+   postgres://devops_demo:YOUR_PASSWORD@YOUR_RDS_ENDPOINT:5432/devops_demo?sslmode=require
+   ```
+
+9. Tags: để trống nếu chỉ làm lab.
+10. Bấm `Create parameter`.
+11. Vào IAM, thêm quyền đọc parameter cho ECS task execution role:
+    - Mở ECS task definition revision hiện tại.
+    - Trong phần Overview, tìm `Task execution role`.
+    - Click role `ecsTaskExecutionRole` để mở IAM role.
+    - Vào tab Permissions.
+    - Bấm Add permissions -> Create inline policy.
+    - Chọn tab JSON, xóa nội dung cũ và dán policy:
+
+      ```json
+      {
+        "Version": "2012-10-17",
+        "Statement": [
+          {
+            "Effect": "Allow",
+            "Action": [
+              "ssm:GetParameter",
+              "ssm:GetParameters"
+            ],
+            "Resource": "arn:aws:ssm:ap-southeast-1:ACCOUNT_ID:parameter/learn-devops-demo/db-url"
+          }
+        ]
+      }
+      ```
+
+    - Đổi `ACCOUNT_ID` thành AWS account ID của bạn.
+    - Bấm Next.
+    - Policy name: `ReadLearnDevopsDemoDbUrl`.
+    - Bấm Create policy.
+12. Update ECS task definition để inject secret vào env var `DATABASE_URL`.
+13. Deploy revision mới.
+
+Lưu ý: `String` khớp với screenshot nhưng value không được mã hóa. Nếu muốn an toàn hơn, chọn `SecureString` thay vì `String`; các bước còn lại giữ nguyên.
 
 Phương án Secrets Manager:
 
@@ -54,12 +92,12 @@ Phương án Secrets Manager:
 
 ## Lệnh CLI kiểm tra/debug
 
-Tạo SecureString SSM:
+Tạo SSM parameter dạng `String` giống screenshot:
 
 ```bash
 aws ssm put-parameter \
   --name /learn-devops-demo/db-url \
-  --type SecureString \
+  --type String \
   --value "postgres://devops_demo:YOUR_PASSWORD@YOUR_RDS_ENDPOINT:5432/devops_demo?sslmode=require" \
   --overwrite
 ```

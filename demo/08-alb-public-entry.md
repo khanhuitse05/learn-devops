@@ -31,22 +31,64 @@ ALB tốn phí ngay cả khi không có traffic. Delete ALB sau khi demo xong.
 
 ## Các bước làm bằng Console
 
-1. Vào EC2 Console -> Load Balancers.
-2. Create Application Load Balancer.
-3. Name: `learn-devops-demo-alb`.
-4. Scheme: Internet-facing.
-5. Listener: HTTP 80.
-6. VPC: `learn-devops-demo-vpc`.
-7. Subnets: 2 public subnets.
-8. Security Group: `learn-devops-demo-alb-sg`.
-9. Create target group:
-   - Name: `learn-devops-demo-node-tg`.
-   - Target type: IP.
+1. Vào AWS Console -> EC2 -> Load Balancers.
+2. Chọn Create load balancer -> Application Load Balancer.
+3. Ở phần Basic configuration:
+   - Load balancer name: `learn-devops-demo-alb`.
+   - Scheme: chọn Internet-facing.
+   - Load balancer IP address type: chọn IPv4.
+4. Ở phần Network mapping:
+   - VPC: chọn `learn-devops-demo-vpc`.
+   - IPAM pools: không tick Use IPAM pool for public IPv4 addresses.
+   - Availability Zones and subnets: chọn 2 Availability Zones.
+   - Với mỗi Availability Zone, chọn public subnet tương ứng đã tạo ở step 04.
+5. Ở phần Security groups:
+   - Xóa security group `default` nếu đang được chọn.
+   - Chọn `learn-devops-demo-alb-sg`.
+6. Ở phần Listeners and routing:
+   - Listener protocol: HTTP.
+   - Listener port: 80.
+   - Default action: Forward to target groups.
+7. Nếu chưa có target group, chọn create target group và tạo:
+   - Ở phần Target type: chọn IP addresses.
+   - Target group name: `learn-devops-demo-node-tg`.
    - Protocol: HTTP.
    - Port: 3000.
+   - IP address type: IPv4.
+   - VPC: chọn `learn-devops-demo-vpc`.
+   - Protocol version: HTTP1.
+   - Health check protocol: HTTP.
    - Health check path: `/health`.
-10. Update ECS service để attach target group.
-11. Chờ target healthy.
+   - Advanced health check settings: để mặc định.
+   - Target optimizer: chọn Off - Default.
+   - Attributes và Tags: để mặc định, không cần thêm.
+   - Chọn Next.
+   - Ở bước Register targets: chưa cần register thủ công target nào, vì ECS service sẽ tự register task vào target group sau khi attach.
+   - Chọn Review and create -> Create target group.
+8. Quay lại màn Create Application Load Balancer, ở Target group chọn `learn-devops-demo-node-tg`.
+9. Các phần optional như Load balancer tags, CloudFront/WAF, AWS WAF và AWS Global Accelerator để mặc định, không tick thêm.
+10. Kiểm tra phần Review:
+    - Scheme: Internet-facing.
+    - IP address type: IPv4.
+    - VPC: `learn-devops-demo-vpc`.
+    - Security groups: `learn-devops-demo-alb-sg`.
+    - Listener: HTTP:80 forward tới `learn-devops-demo-node-tg`.
+11. Chọn Create load balancer.
+12. Update ECS service để attach target group:
+    - Vào ECS Console -> Clusters -> chọn `learn-devops-demo-cluster`.
+    - Mở tab Services -> chọn `learn-devops-demo-node-service`.
+    - Chọn Update service.
+    - Ở phần Load balancing, chọn Application Load Balancer.
+    - Load balancer: chọn `learn-devops-demo-alb`.
+    - Listener: chọn HTTP:80.
+    - Target group: chọn `learn-devops-demo-node-tg`.
+    - Container to load balance:
+      - Container name: `app`.
+      - Container port: `3000`.
+    - Desired tasks: giữ `1`.
+    - Giữ các mục còn lại mặc định, chọn Update.
+    - ECS sẽ deploy lại service và tự register private IP của Fargate task vào target group.
+13. Chờ target healthy.
 
 ## Lệnh CLI kiểm tra/debug
 
