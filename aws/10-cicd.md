@@ -1,67 +1,67 @@
 # AWS CI/CD Services
 
-CI/CD (Continuous Integration / Continuous Deployment) là pipeline tự động build, test, và deploy code mỗi khi developer push code. AWS cung cấp: **CodePipeline**, **CodeBuild**, **CodeDeploy**, và **ECR** (container registry).
+CI/CD (Continuous Integration / Continuous Deployment) is an automated pipeline for building, testing, and deploying code every time a developer pushes code. AWS provides: **CodePipeline**, **CodeBuild**, **CodeDeploy**, and **ECR** (container registry).
 
 ---
 
-## 1. Bảng tổng quan
+## 1. Overview Table
 
-| Dịch vụ        | Vai trò                                     | Tương đương với                              |
-|----------------|---------------------------------------------|---------------------------------------------|
-| CodePipeline   | Orchestrate toàn bộ pipeline (gắn kết các stage) | GitHub Actions Workflow, Jenkins Pipeline   |
-| CodeBuild      | Build & test code (compile, unit test, build Docker image) | GitHub Actions Runner, Jenkins Agent       |
-| CodeDeploy     | Deploy code đến EC2, ECS, Lambda            | Giống CodeDeploy (không có tương đương trực tiếp) |
-| ECR            | Container image registry (lưu Docker image) | Docker Hub, GitHub Container Registry       |
+| Service        | Role                                           | Equivalent to                                |
+|----------------|------------------------------------------------|---------------------------------------------|
+| CodePipeline   | Orchestrate the entire pipeline (connect stages)| GitHub Actions Workflow, Jenkins Pipeline    |
+| CodeBuild      | Build & test code (compile, unit test, build Docker image) | GitHub Actions Runner, Jenkins Agent        |
+| CodeDeploy     | Deploy code to EC2, ECS, Lambda                | Similar to CodeDeploy (no direct equivalent) |
+| ECR            | Container image registry (store Docker images) | Docker Hub, GitHub Container Registry        |
 
-> **Ngoài ra còn có:** CodeArtifact (package registry), CodeGuru (AI code review), CodeStar (project template).
+> **Also available:** CodeArtifact (package registry), CodeGuru (AI code review), CodeStar (project template).
 
 ---
 
 ## 2. CodePipeline – Orchestration Pipeline
 
-### CodePipeline là gì?
-CodePipeline là dịch vụ managed CI/CD orchestration. Bạn định nghĩa pipeline gồm nhiều **stage**, mỗi stage có nhiều **action** (Source → Build → Test → Deploy).
+### What is CodePipeline?
+CodePipeline is a managed CI/CD orchestration service. You define a pipeline consisting of multiple **stages**, each stage having multiple **actions** (Source → Build → Test → Deploy).
 
-### CodePipeline Flow Điển Hình
+### Typical CodePipeline Flow
 
 ```
 [GitHub/CodeCommit] → [CodeBuild: Build & Test] → [CodeDeploy: Staging]
-                                                          ↓ (Manual Approval)
-                                                    [CodeDeploy: Production]
+                                                        ↓ (Manual Approval)
+                                                  [CodeDeploy: Production]
 ```
 
 ### CodePipeline Concepts
 
-| Khái niệm      | Mô tả                                                            |
-|----------------|------------------------------------------------------------------|
-| Pipeline       | Toàn bộ workflow CI/CD                                           |
-| Stage          | Một bước trong pipeline (Source, Build, Deploy...)               |
-| Action         | Công việc cụ thể trong stage (CodeBuild, CodeDeploy, Manual Approval) |
-| Artifact       | File đầu ra từ stage này, đầu vào cho stage sau (build output → deploy input) |
-| Trigger        | Tự động chạy khi push code (GitHub webhook, EventBridge rule)     |
-| Manual Approval| Dừng pipeline chờ người approve trước khi deploy production      |
+| Concept        | Description                                                           |
+|----------------|-----------------------------------------------------------------------|
+| Pipeline       | The entire CI/CD workflow                                             |
+| Stage          | A step in the pipeline (Source, Build, Deploy...)                     |
+| Action         | Specific task in a stage (CodeBuild, CodeDeploy, Manual Approval)     |
+| Artifact       | Output file from one stage, input to the next (build output → deploy input) |
+| Trigger        | Auto-run on code push (GitHub webhook, EventBridge rule)              |
+| Manual Approval| Pause pipeline waiting for human approval before production deploy     |
 
 ### CodePipeline Integration
 
-CodePipeline có thể trigger action:
+CodePipeline can trigger actions:
 - **Source**: CodeCommit, GitHub, Bitbucket, S3, ECR
 - **Build**: CodeBuild, Jenkins
 - **Test**: CodeBuild (unit test, integration test, SAST)
 - **Deploy**: CodeDeploy, CloudFormation, ECS, Elastic Beanstalk, S3, Lambda
 - **Invoke**: Lambda function, Step Functions
 
-### Mẹo thực tế
-- Dùng **Manual Approval** trước production deploy
-- **Pipeline Execution History**: Xem lịch sử chạy, debug pipeline lỗi
-- Tích hợp **CodePipeline + Chatbot** (Slack) để nhận notification khi pipeline thành công/thất bại
-- **Cross-account pipeline**: Source ở account Dev, deploy đến account Prod
+### Practical Tips
+- Use **Manual Approval** before production deploy
+- **Pipeline Execution History**: View execution history, debug pipeline failures
+- Integrate **CodePipeline + Chatbot** (Slack) to receive notifications on pipeline success/failure
+- **Cross-account pipeline**: Source in Dev account, deploy to Prod account
 
 ---
 
 ## 3. CodeBuild – Build & Test
 
-### CodeBuild là gì?
-CodeBuild là dịch vụ managed build: bạn đưa source code + buildspec.yml, CodeBuild chạy build trong container và trả về artifact.
+### What is CodeBuild?
+CodeBuild is a managed build service: you provide source code + buildspec.yml, CodeBuild runs the build in a container and returns artifacts.
 
 ### buildspec.yml Example
 
@@ -101,47 +101,47 @@ cache:
 
 ### CodeBuild Features
 
-| Tính năng            | Mô tả                                                           |
+| Feature              | Description                                                     |
 |----------------------|-----------------------------------------------------------------|
 | Managed Build Env    | Ubuntu, Windows, custom Docker image                            |
-| Build Caching        | Cache dependencies (S3 hoặc local) để build nhanh hơn           |
-| Build Artifacts      | Output lưu vào S3, dùng cho stage sau                           |
-| Environment Variables| Truyền secret (Secrets Manager) hoặc plaintext                  |
-| VPC Integration      | Chạy build trong VPC (truy cập RDS, private resources)          |
-| Batch Build          | Build song song nhiều cấu hình (matrix build)                   |
-| Test Reports         | Tự động parse JUnit/NUnit/Cucumber report, hiển thị kết quả test |
+| Build Caching        | Cache dependencies (S3 or local) for faster builds              |
+| Build Artifacts      | Output stored in S3, used for subsequent stages                 |
+| Environment Variables| Pass secrets (Secrets Manager) or plaintext                     |
+| VPC Integration      | Run build inside VPC (access RDS, private resources)            |
+| Batch Build          | Build multiple configurations in parallel (matrix build)        |
+| Test Reports         | Auto-parse JUnit/NUnit/Cucumber reports, display test results   |
 
-### Mẹo thực tế
-- **Caching** dependencies (npm `node_modules`, Maven `.m2`) giảm build time đáng kể
-- Dùng **build spec override** nếu muốn dùng chung 1 CodeBuild project cho nhiều pipeline
-- **Environment type**: Chọn `LINUX_GPU_CONTAINER` nếu cần GPU (ML build)
-- CodeBuild logs tự động gửi lên CloudWatch Logs
+### Practical Tips
+- **Caching** dependencies (npm `node_modules`, Maven `.m2`) significantly reduces build time
+- Use **build spec override** if you want to share 1 CodeBuild project across multiple pipelines
+- **Environment type**: Choose `LINUX_GPU_CONTAINER` if you need GPU (ML builds)
+- CodeBuild logs are automatically sent to CloudWatch Logs
 
 ---
 
 ## 4. CodeDeploy – Deploy Application
 
-### CodeDeploy là gì?
-CodeDeploy tự động deploy code đến EC2, on-premise server, ECS, hoặc Lambda. Nó hỗ trợ nhiều deployment strategy để giảm downtime.
+### What is CodeDeploy?
+CodeDeploy automatically deploys code to EC2, on-premise servers, ECS, or Lambda. It supports multiple deployment strategies to minimize downtime.
 
 ### CodeDeploy Deployment Strategies
 
-| Strategy           | Mô tả                                                       | Phù hợp               |
-|--------------------|------------------------------------------------------------|------------------------|
-| In-place           | Deploy thẳng lên instance hiện tại (có downtime nhẹ)       | EC2/On-premise         |
-| Rolling            | Deploy từng batch instance một (vd: batch 25%)             | EC2 (không downtime)   |
-| Blue/Green         | Tạo môi trường mới (xanh), test → switch DNS sang xanh      | ECS, Lambda, EC2       |
-| Canary             | Deploy 10% traffic → nếu ổn → 100%                         | ECS, Lambda            |
-| Linear             | Tăng dần traffic (10% mỗi N phút)                          | ECS, Lambda            |
+| Strategy           | Description                                                    | Suitable for          |
+|--------------------|----------------------------------------------------------------|------------------------|
+| In-place           | Deploy directly onto existing instances (slight downtime)       | EC2/On-premise         |
+| Rolling            | Deploy one batch of instances at a time (e.g.: batch 25%)       | EC2 (no downtime)      |
+| Blue/Green         | Create new environment (blue), test → switch DNS to blue        | ECS, Lambda, EC2       |
+| Canary             | Deploy 10% traffic → if stable → 100%                          | ECS, Lambda            |
+| Linear             | Gradually increase traffic (10% every N minutes)               | ECS, Lambda            |
 
 ### CodeDeploy Components
 
-| Thành phần         | Mô tả                                                         |
-|--------------------|---------------------------------------------------------------|
-| Application        | Tên app cần deploy                                            |
-| Deployment Group   | Nhóm target (EC2 tag, ASG, ECS service, Lambda function)      |
-| AppSpec file       | Định nghĩa cách deploy (file YAML/JSON)                       |
-| Deployment         | Một lần deploy cụ thể                                         |
+| Component         | Description                                                        |
+|--------------------|--------------------------------------------------------------------|
+| Application        | Name of the app to deploy                                          |
+| Deployment Group   | Group of targets (EC2 tag, ASG, ECS service, Lambda function)      |
+| AppSpec file       | Defines how to deploy (YAML/JSON file)                             |
+| Deployment         | A specific deployment instance                                     |
 
 ### AppSpec for ECS (appspec.yml)
 
@@ -157,46 +157,46 @@ Resources:
           ContainerPort: 3000
 ```
 
-### CodeDeploy Hooks (Cho EC2)
+### CodeDeploy Hooks (For EC2)
 
-| Hook                  | Khi nào chạy                    |
-|-----------------------|---------------------------------|
-| BeforeBlockTraffic    | Trước khi chặn traffic          |
-| BlockTraffic          | Chặn traffic (deregister ALB)   |
-| AfterBlockTraffic     | Sau khi chặn traffic            |
-| ApplicationStop       | Dừng app cũ                    |
-| BeforeInstall         | Trước khi cài code mới          |
-| Install               | Copy code mới vào server        |
-| AfterInstall          | Sau khi copy code               |
-| ApplicationStart      | Khởi động app mới               |
-| ValidateService       | Health check                    |
-| BeforeAllowTraffic    | Trước khi mở traffic            |
-| AllowTraffic          | Mở traffic (register ALB)       |
-| AfterAllowTraffic     | Sau khi mở traffic              |
+| Hook                  | When it runs                    |
+|-----------------------|----------------------------------|
+| BeforeBlockTraffic    | Before blocking traffic          |
+| BlockTraffic          | Block traffic (deregister ALB)   |
+| AfterBlockTraffic     | After blocking traffic           |
+| ApplicationStop       | Stop old app                     |
+| BeforeInstall         | Before installing new code       |
+| Install               | Copy new code to server          |
+| AfterInstall          | After copying code               |
+| ApplicationStart      | Start new app                    |
+| ValidateService       | Health check                     |
+| BeforeAllowTraffic    | Before opening traffic           |
+| AllowTraffic          | Open traffic (register ALB)      |
+| AfterAllowTraffic     | After opening traffic            |
 
-### Mẹo thực tế
-- **Blue/Green cho ECS Fargate**: Tự động tạo replacement task set, test, rồi switch traffic – không downtime
-- **CodeDeploy Deployment Group** có thể config alarm-based rollback: nếu CloudWatch Alarm báo lỗi sau deploy → auto rollback
-- **AppSpec hooks**: Chạy script validate (kiểm tra HTTP 200) ở ValidateService stage
+### Practical Tips
+- **Blue/Green for ECS Fargate**: Automatically creates replacement task set, tests, then switches traffic – zero downtime
+- **CodeDeploy Deployment Group** can configure alarm-based rollback: if CloudWatch Alarm signals error after deploy → auto rollback
+- **AppSpec hooks**: Run a validate script (check HTTP 200) in the ValidateService stage
 
 ---
 
 ## 5. ECR (Elastic Container Registry)
 
-### ECR là gì?
-ECR là container image registry của AWS, lưu Docker image để ECS/EKS kéo về chạy. Tương tự Docker Hub nhưng tích hợp sâu với AWS.
+### What is ECR?
+ECR is AWS's container image registry, storing Docker images for ECS/EKS to pull and run. Similar to Docker Hub but deeply integrated with AWS.
 
 ### ECR Features
 
-| Tính năng              | Mô tả                                                           |
-|------------------------|-----------------------------------------------------------------|
-| Repository             | Nơi lưu Docker image (1 repo = 1 app)                           |
-| Image Tag              | Gắn tag cho image (latest, v1.2.3, commit-hash)                 |
-| Image Scanning         | Quét CVE trong image (free: basic scan, paid: Inspector)        |
-| Lifecycle Policy       | Tự động xóa image cũ (giữ N image gần nhất)                     |
-| Cross-Account Access   | Chia sẻ repo cho account khác                                   |
-| Replication            | Cross-region replication cho DR                                 |
-| Pull-Through Cache     | Cache image từ Docker Hub/ECR Public vào private ECR            |
+| Feature                | Description                                                       |
+|------------------------|-------------------------------------------------------------------|
+| Repository             | Where Docker images are stored (1 repo = 1 app)                   |
+| Image Tag              | Tag images (latest, v1.2.3, commit-hash)                         |
+| Image Scanning         | Scan for CVEs in images (free: basic scan, paid: Inspector)       |
+| Lifecycle Policy       | Auto-delete old images (keep N most recent)                       |
+| Cross-Account Access   | Share repos with other accounts                                   |
+| Replication            | Cross-region replication for DR                                   |
+| Pull-Through Cache     | Cache images from Docker Hub/ECR Public into private ECR          |
 
 ### ECR Lifecycle Policy Example
 
@@ -228,18 +228,18 @@ ECR là container image registry của AWS, lưu Docker image để ECS/EKS kéo
 }
 ```
 
-### Mẹo thực tế
-- **Image tag strategy**: Dùng `git-commit-hash` thay vì `latest` để trace được version. `latest` không cho biết đang chạy code nào
-- Bật **image scanning** để biết có CVE nào trong base image không
-- **Lifecycle policy** giúp không bị lưu image vô hạn (tốn tiền S3)
-- ECR là **private registry** mặc định, không public ra ngoài
+### Practical Tips
+- **Image tag strategy**: Use `git-commit-hash` instead of `latest` to trace versions. `latest` doesn't tell you which code is running
+- Enable **image scanning** to know if there are CVEs in your base image
+- **Lifecycle policy** prevents unlimited image storage (saves S3 costs)
+- ECR is a **private registry** by default, not publicly exposed
 
 ---
 
-## 6. Complete CI/CD Flow với AWS Services
+## 6. Complete CI/CD Flow with AWS Services
 
 ```
-Developer push code
+Developer pushes code
         ↓
 [GitHub] → webhook trigger
         ↓
@@ -250,35 +250,35 @@ Developer push code
     - npm test / pytest (unit test)
     - docker build -t app:$COMMIT_HASH .
     - docker push $ECR_REPO:$COMMIT_HASH
-    - tạo imagedefinitions.json artifact
+    - create imagedefinitions.json artifact
         ↓
-[CodeBuild: Test Stage] (tùy chọn)
+[CodeBuild: Test Stage] (optional)
     - integration test
     - security scan
         ↓
 [CodeDeploy: Deploy Staging]
-    - ECS Blue/Green deploy với $COMMIT_HASH
+    - ECS Blue/Green deploy with $COMMIT_HASH
     - Automated smoke test
         ↓
 [Manual Approval Stage]
         ↓
 [CodeDeploy: Deploy Production]
     - ECS Blue/Green deploy
-    - CloudWatch Alarm monitor (rollback nếu lỗi)
+    - CloudWatch Alarm monitor (rollback on error)
 ```
 
 ---
 
-## 7. Tóm tắt chọn dịch vụ
+## 7. Service Selection Summary
 
-| Nhu cầu                                                      | Dịch vụ                         |
-|--------------------------------------------------------------|---------------------------------|
-| Orchestrate CI/CD pipeline tự động                            | **CodePipeline**                |
-| Build, test, và build Docker image                            | **CodeBuild** + buildspec.yml   |
-| Deploy zero-downtime lên ECS/Lambda/EC2                      | **CodeDeploy (Blue/Green)**     |
-| Lưu Docker image cho ECS/EKS                                 | **ECR**                         |
-| Lưu package (npm, pip, Maven) riêng của team                  | **CodeArtifact**                |
-| Quét CVE trong Docker image                                   | **ECR Image Scanning** hoặc **Inspector** |
-| AI code review (tìm bug, best practice violation)             | **CodeGuru Reviewer**           |
-| Muốn CI/CD ngoài AWS (GitHub Actions)                         | GitHub Actions + AWS CLI/SDK    |
-| Muốn CI/CD multi-cloud                                        | GitLab CI / Jenkins + Terraform |
+| Need                                                       | Service                          |
+|------------------------------------------------------------|----------------------------------|
+| Orchestrate automated CI/CD pipeline                       | **CodePipeline**                 |
+| Build, test, and build Docker image                        | **CodeBuild** + buildspec.yml    |
+| Zero-downtime deploy to ECS/Lambda/EC2                    | **CodeDeploy (Blue/Green)**      |
+| Store Docker images for ECS/EKS                            | **ECR**                          |
+| Store team packages (npm, pip, Maven)                      | **CodeArtifact**                 |
+| Scan CVEs in Docker images                                  | **ECR Image Scanning** or **Inspector** |
+| AI code review (find bugs, best practice violations)       | **CodeGuru Reviewer**            |
+| Want CI/CD outside AWS (GitHub Actions)                    | GitHub Actions + AWS CLI/SDK      |
+| Want CI/CD multi-cloud                                     | GitLab CI / Jenkins + Terraform  |

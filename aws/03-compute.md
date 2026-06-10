@@ -1,162 +1,162 @@
 # AWS Compute Services
 
-Sáu dịch vụ compute chính của AWS, chia thành **4 nhóm kiến trúc**: Máy chủ ảo (IaaS), Container Orchestration, Serverless Container, và Serverless Function (FaaS).
+Six main AWS compute services, divided into **4 architectural groups**: Virtual Machines (IaaS), Container Orchestration, Serverless Container, and Serverless Function (FaaS).
 
 ---
 
-## 1. Bảng so sánh tổng quan
+## 1. Overview Comparison Table
 
-| Dịch vụ   | Bản chất                          | Mức quản lý (AWS lo)         | Mô hình tính phí                                               | Use case điển hình                                              |
-|-----------|-----------------------------------|-------------------------------|----------------------------------------------------------------|-----------------------------------------------------------------|
-| Lightsail | VPS đơn giản hóa                   | Thấp (giao diện đơn giản)     | Giá cố định hàng tháng (trọn gói)                               | Web nhỏ, WordPress blog, môi trường Dev/Test nhanh               |
-| EC2       | Máy chủ ảo cấu hình sâu            | Thấp (bạn tự quản OS/Network)  | Theo giây/giờ + phí EBS, bandwidth riêng                        | Ứng dụng truyền thống, cần toàn quyền cấu hình OS/Kernel         |
-| ECS       | Container Orchestration (của AWS)  | Trung bình (AWS quản lý master) | Miễn phí quản lý, chỉ trả tiền hạ tầng bên dưới                 | Chạy Docker container trong hệ sinh thái thuần AWS                |
-| EKS       | Managed Kubernetes (K8s)           | Trung bình (AWS quản lý Control Plane) | Phí cố định $0.10/giờ/cluster + hạ tầng bên dưới               | Hệ Microservices lớn, cần chuẩn K8s, multi-cloud                 |
-| Fargate   | Serverless cho Container           | Cao (AWS quản cả OS + Server)   | Theo vCPU + RAM tiêu thụ mỗi giây chạy                           | Chạy Docker (ECS/EKS) không muốn quản lý máy chủ                  |
-| Lambda    | Serverless Function (FaaS)         | Cao nhất (chỉ quan tâm Code)    | Theo số request + thời gian chạy (GB-giây)                       | Event-driven, API ngắn hạn, cron job, xử lý ảnh/file             |
+| Service  | Nature                             | Management Level (AWS handles) | Pricing Model                                                | Typical Use Case                                              |
+|----------|------------------------------------|-------------------------------|--------------------------------------------------------------|---------------------------------------------------------------|
+| Lightsail| Simplified VPS                     | Low (simple interface)        | Fixed monthly price (all-inclusive)                          | Small websites, WordPress blog, quick Dev/Test environments    |
+| EC2      | Deeply configurable virtual server | Low (you manage OS/Network)   | Per second/hour + separate EBS, bandwidth fees               | Traditional apps, need full OS/Kernel configuration            |
+| ECS      | Container Orchestration (by AWS)   | Medium (AWS manages master)   | Free management, only pay for underlying infrastructure       | Run Docker containers in pure AWS ecosystem                   |
+| EKS      | Managed Kubernetes (K8s)           | Medium (AWS manages Control Plane) | Fixed fee $0.10/hour/cluster + underlying infrastructure | Large microservices, need K8s standard, multi-cloud           |
+| Fargate  | Serverless for Containers          | High (AWS manages OS + Server) | Per vCPU + RAM consumed per second of runtime                | Run Docker (ECS/EKS) without wanting to manage servers         |
+| Lambda   | Serverless Function (FaaS)         | Highest (only worry about Code) | Per request + execution duration (GB-seconds)               | Event-driven, short APIs, cron jobs, image/file processing    |
 
 ---
 
-## 2. Chi tiết từng nhóm dịch vụ
+## 2. Detailed Breakdown by Service Group
 
-### Nhóm 1: Máy chủ ảo (Virtual Machines)
+### Group 1: Virtual Machines
 
-**Lightsail** – "EC2 mì ăn liền". Chọn gói cấu hình cố định (vd: $5/tháng có sẵn RAM, CPU, SSD, bandwidth). Giao diện đơn giản, dễ dùng, nhưng **bị giới hạn** về khả năng tùy biến nâng cao và auto-scaling. Không nên dùng cho production lớn.
+**Lightsail** – "Instant EC2". Pick a fixed configuration package (e.g.: $5/month includes RAM, CPU, SSD, bandwidth). Simple interface, easy to use, but **limited** in advanced customization and auto-scaling capabilities. Not recommended for large production.
 
-**EC2 (Elastic Compute Cloud)** – Nền tảng core của AWS. Bạn có toàn quyền cấu hình từ Network (VPC), Security Group, Storage (EBS), đến OS. Phù hợp cho hệ thống lớn cần cấu hình sâu, nhưng bạn phải tự lo bảo mật, patch OS, và cấu hình Auto Scaling.
+**EC2 (Elastic Compute Cloud)** – AWS's core platform. You have full configuration control from Network (VPC), Security Groups, Storage (EBS), to OS. Suitable for large systems needing deep configuration, but you must handle security, OS patching, and Auto Scaling configuration yourself.
 
-**EC2 Instance Types cần biết (theo mục đích):**
+**EC2 Instance Types to Know (by purpose):**
 
-| Family | Mục đích                          | Ví dụ instance    |
+| Family | Purpose                          | Example instance    |
 |--------|-----------------------------------|-------------------|
-| T      | Burstable (general purpose, rẻ)   | t3.medium, t4g    |
-| M      | General purpose (cân bằng)        | m7i.medium        |
-| C      | Compute optimized (CPU nặng)      | c7i.large         |
-| R      | Memory optimized (RAM lớn)        | r7i.large         |
+| T      | Burstable (general purpose, cheap)| t3.medium, t4g    |
+| M      | General purpose (balanced)        | m7i.medium        |
+| C      | Compute optimized (CPU-heavy)     | c7i.large         |
+| R      | Memory optimized (large RAM)      | r7i.large         |
 | G/P    | GPU (ML training, rendering)      | g5.xlarge         |
 
 **EC2 Pricing Models:**
 
-| Model           | Mô tả                                                        | Tiết kiệm so với On-Demand |
-|------------------|--------------------------------------------------------------|----------------------------|
-| On-Demand        | Trả theo giây, không cam kết                                  | 0% (baseline)              |
-| Reserved (RI)    | Cam kết 1 hoặc 3 năm, trả trước hoặc từng phần               | Lên đến 72%                |
-| Spot Instance    | Dùng capacity dư của AWS, giá rẻ nhưng có thể bị thu hồi bất kỳ lúc nào | Lên đến 90%        |
-| Savings Plan     | Cam kết spend $X/giờ trong 1-3 năm, linh hoạt hơn RI         | Lên đến 72%                |
-| Dedicated Host   | Máy chủ vật lý riêng (compliance, license cũ)                 | Đắt nhất                   |
+| Model           | Description                                                       | Savings vs On-Demand |
+|------------------|------------------------------------------------------------------|------------------------|
+| On-Demand        | Pay per second, no commitment                                     | 0% (baseline)        |
+| Reserved (RI)    | Commit 1 or 3 years, upfront or partial payment                  | Up to 72%            |
+| Spot Instance    | Use AWS's spare capacity, very cheap but can be reclaimed anytime | Up to 90%            |
+| Savings Plan     | Commit $X/hour spend for 1-3 years, more flexible than RI        | Up to 72%            |
+| Dedicated Host   | Dedicated physical server (compliance, legacy licenses)          | Most expensive        |
 
 ---
 
-### Nhóm 2: Container Orchestration (Điều phối container)
+### Group 2: Container Orchestration
 
-Nếu bạn đóng gói app bằng Docker, cần một "bộ não" để quyết định container nào chạy ở đâu, scale ra sao. AWS có 2 lựa chọn:
+If you package your app with Docker, you need a "brain" to decide which container runs where and how to scale. AWS has 2 options:
 
-**ECS (Elastic Container Service)** – Orchestration do chính AWS phát triển. Tích hợp sâu với IAM, ALB, CloudWatch. Không tốn phí quản lý. Học nhanh hơn K8s.
+**ECS (Elastic Container Service)** – Orchestration developed by AWS itself. Deep integration with IAM, ALB, CloudWatch. No management fee. Faster to learn than K8s.
 
-**EKS (Elastic Kubernetes Service)** – Managed Kubernetes chuẩn. Nếu team đã quen K8s hoặc muốn tránh vendor lock-in (chạy được trên GCP, Azure), chọn EKS. Phí quản lý $0.10/giờ/cluster.
+**EKS (Elastic Kubernetes Service)** – Standard managed Kubernetes. If your team is already familiar with K8s or wants to avoid vendor lock-in (can run on GCP, Azure), choose EKS. Management fee $0.10/hour/cluster.
 
-> ⚠️ **Quan trọng:** ECS và EKS chỉ là "bộ não" điều phối – chúng cần hạ tầng (compute) bên dưới để chạy container. Bạn có 2 lựa chọn: chạy trên **EC2** (tự quản lý máy) hoặc chạy trên **Fargate** (serverless).
-
----
-
-### Nhóm 3: Serverless Container
-
-**Fargate** – Không phải dịch vụ độc lập, mà là **compute engine** dùng chung với ECS hoặc EKS. Thay vì tạo cụm EC2 để chạy Docker, bạn chỉ cần:
-1. Đẩy Docker image lên ECR
-2. Khai báo: "Tôi cần 1 vCPU + 2GB RAM"
-3. Fargate tự chạy container đó
-
-**Không cần** patch OS, không cần quản lý server, không cần lo capacity planning.
-
-**Phù hớp** Web server, API dài, WebSocket, background job.
+> ⚠️ **Important:** ECS and EKS are only the orchestration "brain" – they need underlying infrastructure (compute) to run containers. You have 2 choices: run on **EC2** (manage servers yourself) or run on **Fargate** (serverless).
 
 ---
 
-### Nhóm 4: Serverless Function (FaaS)
+### Group 3: Serverless Container
 
-**Lambda** – Đỉnh cao của serverless. Bạn chỉ cần viết code (Node.js, Python, Go, Java, .NET...) và upload. Code chỉ chạy khi có event trigger. Nếu không có request, bạn tốn **0 đồng**.
+**Fargate** – Not a standalone service, but a **compute engine** used with ECS or EKS. Instead of creating EC2 clusters to run Docker, you just need to:
+1. Push Docker image to ECR
+2. Declare: "I need 1 vCPU + 2GB RAM"
+3. Fargate automatically runs that container
 
-**Giới hạn của Lambda:**
-- Thời gian chạy tối đa: **15 phút/request** (có thể cấu hình tối đa 15 phút)
-- Bộ nhớ tối đa: 10GB RAM
-- Ổ đĩa tạm (/tmp): tối đa 10GB
-- **Cold Start**: Request đầu tiên sau một thời gian không dùng sẽ bị delay (vài trăm ms đến vài giây) do AWS cần khởi động môi trường thực thi
+**No need** to patch OS, no server management, no capacity planning worries.
 
-**Phù hợp nhất** Event-driven, API ngắn, cron, xử lý file 
+**Suitable for**: Web servers, long-running APIs, WebSocket, background jobs.
 
 ---
 
-## 4. Auto Scaling – Tự động co giãn
+### Group 4: Serverless Function (FaaS)
+
+**Lambda** – The pinnacle of serverless. You only need to write code (Node.js, Python, Go, Java, .NET...) and upload. Code only runs when triggered by an event. If there are no requests, you pay **$0**.
+
+**Lambda Limitations:**
+- Maximum runtime: **15 minutes/request** (configurable up to 15 minutes)
+- Maximum memory: 10GB RAM
+- Temporary disk (/tmp): maximum 10GB
+- **Cold Start**: The first request after a period of inactivity will be delayed (a few hundred ms to a few seconds) as AWS needs to start the execution environment
+
+**Best suited for**: Event-driven, short APIs, cron jobs, file processing.
+
+---
+
+## 4. Auto Scaling – Automatic Scaling
 
 ### EC2 Auto Scaling
-- **Scale-out**: Thêm EC2 instance khi CPU/RAM/Network cao
-- **Scale-in**: Xóa bớt instance khi tải giảm
-- **Launch Template**: Định nghĩa AMI, instance type, user data script
-- **Scaling Policy**: Target tracking (giữ CPU ~50%), Step scaling, Scheduled scaling
+- **Scale-out**: Add EC2 instances when CPU/RAM/Network is high
+- **Scale-in**: Remove instances when load decreases
+- **Launch Template**: Define AMI, instance type, user data script
+- **Scaling Policy**: Target tracking (keep CPU ~50%), Step scaling, Scheduled scaling
 
 ### ECS Service Auto Scaling
-- Tăng/giảm số lượng task (container) dựa trên CloudWatch metrics
-- Có thể scale theo: CPU, RAM, ALB Request Count Per Target
-- Kết hợp với **Capacity Provider** để tự động thêm EC2 instance khi cần (nếu dùng EC2 launch type)
+- Increase/decrease number of tasks (containers) based on CloudWatch metrics
+- Can scale by: CPU, RAM, ALB Request Count Per Target
+- Combine with **Capacity Provider** to automatically add EC2 instances when needed (if using EC2 launch type)
 
 ### Lambda Auto Scaling
-- **Tự động hoàn toàn** – bạn không cần cấu hình gì
-- Lambda sẽ tự scale từ 0 lên hàng ngàn concurrent execution trong vài giây
-- Giới hạn mặc định: **1000 concurrent execution/region** (có thể request nâng quota)
+- **Fully automatic** – you don't need to configure anything
+- Lambda will auto-scale from 0 to thousands of concurrent executions in seconds
+- Default limit: **1000 concurrent executions/region** (can request quota increase)
 
 ---
 
-## 5. Góc nhìn chi phí
+## 5. Cost Perspective
 
-| Dịch vụ   | Idle cost        | Production nhỏ (100 req/s) | Production lớn (10,000 req/s) |
-|-----------|------------------|----------------------------|-------------------------------|
-| Lightsail | Cố định ~$5-20/tháng | Rẻ nhưng không scale được | Không phù hợp                  |
-| EC2       | Có (server chạy 24/7) | ~$50-200/tháng (t3.medium) | ~$500-2000/tháng (cần RI)      |
-| ECS+EC2   | Có (EC2 chạy 24/7)  | Giống EC2 + ít overhead   | Tối ưu hơn EC2 thuần           |
-| ECS+Fargate | Không (pay-per-use) | ~$30-100/tháng            | ~$400-1500/tháng               |
-| EKS       | Có (~$72/tháng cluster + compute) | ~$150-400/tháng           | ~$1000-5000/tháng              |
-| Lambda    | $0                   | ~$5-30/tháng              | Có thể đắt hơn container ở scale lớn |
+| Service   | Idle cost        | Small Production (100 req/s) | Large Production (10,000 req/s) |
+|-----------|------------------|------------------------------|---------------------------------|
+| Lightsail | Fixed ~$5-20/month | Cheap but can't scale       | Not suitable                    |
+| EC2       | Yes (server runs 24/7) | ~$50-200/month (t3.medium) | ~$500-2000/month (need RI)      |
+| ECS+EC2   | Yes (EC2 runs 24/7)  | Similar to EC2 + little overhead | More optimized than pure EC2 |
+| ECS+Fargate | No (pay-per-use) | ~$30-100/month              | ~$400-1500/month               |
+| EKS       | Yes (~$72/month cluster + compute) | ~$150-400/month         | ~$1000-5000/month              |
+| Lambda    | $0                  | ~$5-30/month                | Can be more expensive than containers at large scale |
 
-> **Mẹo:** Lambda rẻ nhất ở scale nhỏ và không liên tục. Ở scale lớn + chạy 24/7, ECS+Fargate thường rẻ hơn Lambda.
+> **Tip:** Lambda is cheapest at small scale and non-continuous usage. At large scale + 24/7 runtime, ECS+Fargate is usually cheaper than Lambda.
 
 ---
 
-## 6. Quyết định chọn dịch vụ nào?
+## 6. Decision Guide: Which Service to Choose?
 
 ```
-Bắt đầu ──→ App nhỏ, đơn giản, không cần scale?
+Start ──→ Small, simple app, no scaling needed?
 │               └→ YES → Lightsail
 │
-├── Cần chạy 24/7, full control OS/network?
+├── Need 24/7 runtime, full OS/network control?
 │               └→ YES → EC2 (+ Auto Scaling Group)
 │
-├── Đã đóng gói Docker, muốn ít quản lý?
-│               └→ YES → ECS + Fargate (khuyên dùng nhất)
+├── Already using Docker, want minimal management?
+│               └→ YES → ECS + Fargate (most recommended)
 │
-├── Team dùng Kubernetes, cần multi-cloud?
-│               └→ YES → EKS + Fargate (hoặc EC2)
+├── Team uses Kubernetes, need multi-cloud?
+│               └→ YES → EKS + Fargate (or EC2)
 │
-├── Chạy theo event (trigger), không cần chạy liên tục?
+├── Event-driven (triggered), no need for continuous runtime?
 │               └→ YES → Lambda
 │
-├── Chạy liên tục nhưng không muốn quản lý server + Docker?
+├── Continuous runtime but don't want to manage servers + Docker?
 │               └→ YES → ECS + Fargate
 │
-└── WebSocket real-time, long-running connection?
-                └→ YES → ECS/EKS + Fargate (Lambda không phù hợp WebSocket lâu dài)
+└── WebSocket real-time, long-running connections?
+                └→ YES → ECS/EKS + Fargate (Lambda not suitable for persistent WebSocket)
 ```
 
 ---
 
-## 7. Tóm tắt lựa chọn theo bài toán thực tế
+## 7. Summary: Choosing by Real-World Use Case
 
-| Bài toán                                                                 | Dịch vụ khuyên dùng                        |
-|--------------------------------------------------------------------------|--------------------------------------------|
-| Dựng nhanh web portfolio, blog, app demo cho khách                        | **Lightsail**                              |
-| Ứng dụng monolithic cũ (PHP, .NET Framework), cần cài tool riêng vào OS  | **EC2**                                    |
-| Đã đóng gói app bằng Docker, chạy microservices ổn định, không muốn bảo trì server | **ECS + Fargate**                          |
-| Hệ thống microservices rất lớn, kiến trúc Kubernetes chuẩn toàn cầu       | **EKS + Fargate** (hoặc EKS + EC2)         |
-| Tính năng gửi email khi user đăng ký, resize ảnh upload, Telegram Bot    | **Lambda**                                 |
-| REST API backend cho mobile app, dùng Node.js/Python                      | **ECS + Fargate** (cần chạy liên tục) hoặc **Lambda** (nếu ít request) |
-| Long-running background job (>15 phút)                                    | **ECS + Fargate** (Lambda bị giới hạn 15 phút) |
-| WebSocket real-time app (chat, game)                                      | **ECS/EKS + Fargate**                      |
+| Use Case                                                                  | Recommended Service                        |
+|---------------------------------------------------------------------------|--------------------------------------------|
+| Quick portfolio website, blog, demo app for clients                       | **Lightsail**                              |
+| Legacy monolithic app (PHP, .NET Framework), need custom tools on OS      | **EC2**                                    |
+| App already containerized with Docker, running stable microservices, no server maintenance | **ECS + Fargate**                          |
+| Very large microservices system, standard global Kubernetes architecture  | **EKS + Fargate** (or EKS + EC2)           |
+| Email feature on user signup, image resize on upload, Telegram Bot        | **Lambda**                                 |
+| REST API backend for mobile app, using Node.js/Python                     | **ECS + Fargate** (needs continuous runtime) or **Lambda** (if low requests) |
+| Long-running background job (>15 minutes)                                 | **ECS + Fargate** (Lambda limited to 15 min) |
+| WebSocket real-time app (chat, games)                                     | **ECS/EKS + Fargate**                      |

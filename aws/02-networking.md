@@ -1,119 +1,119 @@
 # AWS Networking & Traffic Management
 
-Dịch vụ mạng của AWS giúp bạn kiểm soát cách traffic đi vào, đi ra, và di chuyển bên trong hệ thống. Các dịch vụ chính: **VPC**, **ALB/NLB**, **API Gateway**.
+AWS networking services help you control how traffic enters, exits, and moves within your system. The main services: **VPC**, **ALB/NLB**, **API Gateway**.
 
 ---
 
-## 1. VPC (Virtual Private Cloud) - Nền tảng mạng riêng ảo
+## 1. VPC (Virtual Private Cloud) - Virtual Private Network Foundation
 
-### VPC là gì?
-VPC là một network ảo riêng biệt của bạn trong AWS. Bạn định nghĩa dải IP (CIDR), chia subnet, cấu hình route table, và kiểm soát traffic ra/vào bằng Security Group và NACL.
+### What is VPC?
+VPC is your own isolated virtual network within AWS. You define the IP range (CIDR), divide into subnets, configure route tables, and control inbound/outbound traffic using Security Groups and NACLs.
 
-### Các thành phần chính của VPC
+### Key VPC Components
 
-| Thành phần          | Vai trò                                                                |
-|---------------------|------------------------------------------------------------------------|
-| CIDR Block           | (Classless Inter-Domain Routing) Dải IP của VPC, vd: `10.0.0.0/16` (65,536 IP)                         |
-| Subnet               | Chia nhỏ VPC thành các mạng con. Mỗi subnet nằm trong 1 Availability Zone |
-| Public Subnet        | Subnet có route ra Internet Gateway → tài nguyên có thể truy cập internet |
-| Private Subnet       | Subnet không có route trực tiếp ra internet → bảo mật cho database, backend |
-| Internet Gateway (IGW)| Cổng kết nối VPC với internet công cộng                               |
-| NAT Gateway          | Cho phép tài nguyên trong private subnet truy cập internet (1 chiều ra) mà không bị internet gọi vào |
-| Route Table          | Bảng định tuyến: quyết định traffic từ subnet đi đâu                    |
-| Security Group (SG)  | Firewall cấp instance: stateful, chỉ định nghĩa rule cho phép (allow)  |
-| Network ACL (NACL)   | Firewall cấp subnet: stateless, định nghĩa cả allow lẫn deny           |
-| VPC Endpoint         | Kết nối private từ VPC đến AWS services (S3, DynamoDB...) không qua internet |
+| Component            | Role                                                                  |
+|----------------------|-----------------------------------------------------------------------|
+| CIDR Block           | (Classless Inter-Domain Routing) IP range of the VPC, e.g.: `10.0.0.0/16` (65,536 IPs) |
+| Subnet               | Divides VPC into smaller networks. Each subnet resides in 1 Availability Zone |
+| Public Subnet        | Subnet with a route to Internet Gateway → resources can access the internet |
+| Private Subnet       | Subnet with no direct route to the internet → secure for databases, backend |
+| Internet Gateway (IGW)| Gateway connecting VPC to the public internet                         |
+| NAT Gateway          | Allows resources in private subnets to access the internet (outbound only) without being reachable from the internet |
+| Route Table          | Routing table: decides where traffic from a subnet goes               |
+| Security Group (SG)  | Instance-level firewall: stateful, only allows defining allow rules   |
+| Network ACL (NACL)   | Subnet-level firewall: stateless, defines both allow and deny rules   |
+| VPC Endpoint         | Private connection from VPC to AWS services (S3, DynamoDB...) without going through the internet |
 
-### Kiến trúc VPC điển hình (3-tier)
+### Typical VPC Architecture (3-tier)
 
 ```
 [Internet] ↔ [IGW] ↔ Public Subnet (ALB, Bastion Host)
-                          ↓
-                    Private Subnet App (ECS, EC2)
-                          ↓
-                    Private Subnet Data (RDS, ElastiCache)
+                        ↓
+                  Private Subnet App (ECS, EC2)
+                        ↓
+                  Private Subnet Data (RDS, ElastiCache)
 ```
 
-### Mẹo thực tế
-- **Không đặt database vào public subnet** - đây là lỗi bảo mật nghiêm trọng
-- Dùng **NAT Gateway** (không phải NAT Instance) cho production vì được AWS quản lý, auto-scale
-- **VPC Endpoint** dùng để truy cập S3/DynamoDB từ private subnet mà không tốn NAT Gateway fee, giảm chi phí đáng kể
-- **VPC Peering** và **Transit Gateway**: dùng để kết nối nhiều VPC với nhau. Transit Gateway là hub-and-spoke, tốt hơn VPC Peering mesh khi có >3 VPC
+### Practical Tips
+- **Never put a database in a public subnet** - this is a serious security mistake
+- Use **NAT Gateway** (not NAT Instance) for production as it's AWS-managed and auto-scales
+- **VPC Endpoint** for accessing S3/DynamoDB from private subnets without NAT Gateway fees, significantly reducing costs
+- **VPC Peering** and **Transit Gateway**: used to connect multiple VPCs together. Transit Gateway is hub-and-spoke, better than VPC Peering mesh when you have >3 VPCs
 
 ---
 
-## 2. Elastic Load Balancer (ELB) - Cân bằng tải
+## 2. Elastic Load Balancer (ELB) - Load Balancing
 
-AWS cung cấp 3 loại Load Balancer. Phân biệt rõ ràng để chọn đúng loại:
+AWS provides 3 types of Load Balancers. Understand the differences clearly to choose the right one:
 
-### Bảng so sánh 3 loại Load Balancer
+### Comparison Table of 3 Load Balancer Types
 
-| Tiêu chí              | ALB (Application LB)                | NLB (Network LB)                    | GWLB (Gateway LB)                  |
-|-----------------------|--------------------------------------|--------------------------------------|-------------------------------------|
-| Layer OSI             | Layer 7 (HTTP/HTTPS)                | Layer 4 (TCP/UDP/TLS)                | Layer 3 (IP)                       |
-| Routing theo          | Path, Host header, Query string, Header | IP, Port, Protocol                  | Flow (dùng cho firewall appliance)  |
-| WebSocket             | Hỗ trợ tốt                          | Hỗ trợ (TCP mode)                    | Không                              |
-| Static IP             | Không (dùng Global Accelerator)     | Có (Elastic IP mỗi AZ)              | Có                                 |
-| Latency               | ~1-3ms                              | <0.1ms (siêu thấp)                  | Rất thấp                           |
-| SSL Termination       | Có (tích hợp ACM)                   | Có (TLS)                             | Không                              |
-| Use case chính        | Web app, API, Microservices         | Game server, TCP/UDP streaming, IoT  | Chạy firewall/IDS/IPS ảo hóa       |
+| Criteria              | ALB (Application LB)                | NLB (Network LB)                    | GWLB (Gateway LB)                  |
+|-----------------------|-------------------------------------|--------------------------------------|-------------------------------------|
+| OSI Layer             | Layer 7 (HTTP/HTTPS)                | Layer 4 (TCP/UDP/TLS)                | Layer 3 (IP)                       |
+| Routing by            | Path, Host header, Query string, Header | IP, Port, Protocol                  | Flow (for firewall appliances)      |
+| WebSocket             | Good support                        | Supported (TCP mode)                 | No                                 |
+| Static IP             | No (use Global Accelerator)         | Yes (Elastic IP per AZ)              | Yes                                |
+| Latency               | ~1-3ms                              | <0.1ms (ultra-low)                   | Very low                           |
+| SSL Termination       | Yes (integrated with ACM)           | Yes (TLS)                            | No                                 |
+| Primary use case      | Web app, API, Microservices         | Game server, TCP/UDP streaming, IoT  | Running virtualized firewall/IDS/IPS |
 
-### ALB (Application Load Balancer) - Service chính bạn sẽ dùng
+### ALB (Application Load Balancer) - The Primary Service You'll Use
 
-ALB là load balancer phổ biến nhất cho web developer. Nó hiểu HTTP/HTTPS.
+ALB is the most popular load balancer for web developers. It understands HTTP/HTTPS.
 
-**Các tính năng cần biết:**
+**Features to know:**
 
-1. **Listener Rules**: Định tuyến request dựa trên:
+1. **Listener Rules**: Route requests based on:
    - Path: `/api/*` → target group A, `/images/*` → target group B
    - Host header: `api.example.com` → target group API, `admin.example.com` → target group Admin
    - Query string, HTTP header, source IP
 
-2. **Target Group**: Nhóm các backend nhận traffic. Có thể là:
+2. **Target Group**: Group of backends receiving traffic. Can be:
    - EC2 Instances
-   - ECS Tasks (Fargate hoặc EC2)
+   - ECS Tasks (Fargate or EC2)
    - Lambda Functions
-   - IP Addresses (on-premise server qua VPN/Direct Connect)
+   - IP Addresses (on-premise servers via VPN/Direct Connect)
 
-3. **Health Checks**: ALB liên tục kiểm tra sức khỏe từng target, nếu chết thì ngừng gửi traffic
+3. **Health Checks**: ALB continuously checks the health of each target; if down, stops sending traffic
 
-4. **Sticky Sessions**: User luôn được gửi đến cùng 1 backend (dùng cookie) - cần cho ứng dụng có session local
+4. **Sticky Sessions**: User is always sent to the same backend (using cookies) - needed for apps with local sessions
 
-5. **Redirect & Fixed Response**: Redirect HTTP→HTTPS, hoặc trả fixed response (vd: 503 maintenance page) ngay tại ALB, không cần code trong app
+5. **Redirect & Fixed Response**: Redirect HTTP→HTTPS, or return a fixed response (e.g.: 503 maintenance page) directly at ALB, no app code needed
 
-6. **WAF Integration**: Gắn AWS WAF vào ALB để chặn SQL injection, XSS, rate limit
+6. **WAF Integration**: Attach AWS WAF to ALB to block SQL injection, XSS, rate limiting
 
-### NLB (Network Load Balancer) - Khi cần hiệu năng cực cao
+### NLB (Network Load Balancer) - When You Need Extreme Performance
 
-- Xử lý hàng triệu request/giây với latency siêu thấp
-- Có thể gán **Elastic IP** cố định cho mỗi AZ - rất quan trọng khi partner yêu cầu IP whitelist
-- Dùng cho TCP/UDP service, không cần hiểu HTTP
+- Handles millions of requests/second with ultra-low latency
+- Can assign a fixed **Elastic IP** per AZ - very important when partners require IP whitelisting
+- Used for TCP/UDP services, doesn't need to understand HTTP
 
-### Mẹo thực tế
-- Luôn đặt ALB ở **public subnet** và backend (ECS/EC2) ở **private subnet**
-- Dùng **ACM (AWS Certificate Manager)** để tạo SSL/TLS certificate miễn phí, tích hợp thẳng vào ALB
-- Bật **access logs** cho ALB để debug request và phân tích traffic
-- **Deletion protection**: Bật lên để không ai xóa nhầm ALB production
+### Practical Tips
+- Always place ALB in **public subnets** and backend (ECS/EC2) in **private subnets**
+- Use **ACM (AWS Certificate Manager)** to create free SSL/TLS certificates, integrated directly with ALB
+- Enable **access logs** for ALB to debug requests and analyze traffic
+- **Deletion protection**: Turn it on so no one accidentally deletes production ALB
 
 ---
 
-## 3. API Gateway - Cổng API Serverless
+## 3. API Gateway - Serverless API Gateway
 
-### API Gateway là gì?
-API Gateway là dịch vụ managed giúp bạn tạo, publish, và quản lý REST API hoặc WebSocket API ở quy mô lớn. Nó khác với ALB ở chỗ:
-- **Serverless hoàn toàn**: Không cần cấu hình instance, auto-scale về 0
-- **Tích hợp sâu với AWS**: Có thể gọi thẳng Lambda, DynamoDB, Step Functions, SQS... không cần code backend trung gian
-- **Nhiều tính năng API management**: Authentication, rate limiting, request validation, documentation
+### What is API Gateway?
+API Gateway is a managed service that lets you create, publish, and manage REST APIs or WebSocket APIs at scale. It differs from ALB in that:
+- **Fully serverless**: No instance configuration needed, auto-scales to zero
+- **Deep AWS integration**: Can directly call Lambda, DynamoDB, Step Functions, SQS... without intermediary backend code
+- **Many API management features**: Authentication, rate limiting, request validation, documentation
 
-### Các loại API Gateway
+### Types of API Gateway
 
-| Loại               | Giao thức                | Use case                                    |
-|--------------------|--------------------------|---------------------------------------------|
-| REST API           | HTTP/HTTPS               | Web app, mobile backend, BFF (Backend for Frontend) |
-| HTTP API           | HTTP/HTTPS (nhẹ hơn)     | Proxy cho Lambda, microservices đơn giản, rẻ hơn REST API 70% |
-| WebSocket API      | WebSocket                | Chat app, real-time dashboard, game         |
+| Type               | Protocol                | Use case                                    |
+|--------------------|-------------------------|---------------------------------------------|
+| REST API           | HTTP/HTTPS              | Web app, mobile backend, BFF (Backend for Frontend) |
+| HTTP API           | HTTP/HTTPS (lighter)    | Proxy for Lambda, simple microservices, ~70% cheaper than REST API |
+| WebSocket API      | WebSocket               | Chat app, real-time dashboard, games        |
 
-### Kiến trúc hoạt động
+### Operational Architecture
 
 ```
 [Client] → [API Gateway] → [Lambda] → [DynamoDB]
@@ -125,45 +125,45 @@ API Gateway là dịch vụ managed giúp bạn tạo, publish, và quản lý R
         [Response Transform / Mapping Templates]
 ```
 
-### Các tính năng cốt lõi
+### Core Features
 
 1. **Authentication & Authorization**
-   - **IAM Authorizer**: Dùng cho internal API, service-to-service
-   - **Cognito Authorizer**: Dùng cho user pool (mobile user login)
-   - **Lambda Authorizer**: Custom logic xác thực (JWT, OAuth2, API Key)
+   - **IAM Authorizer**: For internal APIs, service-to-service
+   - **Cognito Authorizer**: For user pools (mobile user login)
+   - **Lambda Authorizer**: Custom authentication logic (JWT, OAuth2, API Key)
 
 2. **Throttling & Rate Limiting**
-   - Giới hạn request/giây cho toàn API hoặc từng API Key, ngăn abuse
-   - Có thể cấu hình burst limit và rate limit riêng
+   - Limit requests/second for the entire API or per API Key, preventing abuse
+   - Can configure burst limit and rate limit separately
 
 3. **Request/Response Transformation**
-   - Dùng **Mapping Template** (VTL - Velocity Template Language) để transform JSON request/response
-   - Ví dụ: Client gửi XML → API Gateway transform thành JSON cho Lambda xử lý
+   - Use **Mapping Templates** (VTL - Velocity Template Language) to transform JSON request/response
+   - Example: Client sends XML → API Gateway transforms to JSON for Lambda processing
 
 4. **Caching**
-   - Cache response tại API Gateway (TTL configurable), giảm gọi Lambda/backend
-   - Cache riêng theo stage (dev/staging/prod)
+   - Cache responses at API Gateway (configurable TTL), reducing Lambda/backend calls
+   - Cache per stage (dev/staging/prod)
 
 5. **CORS Support**
-   - Enable CORS chỉ với 1 click hoặc vài dòng config
+   - Enable CORS with just 1 click or a few lines of config
 
 6. **Usage Plans & API Keys**
-   - Tạo gói API (free, basic, premium) cho third-party developer
+   - Create API packages (free, basic, premium) for third-party developers
 
-### So sánh ALB vs API Gateway
+### ALB vs API Gateway Comparison
 
-| Tiêu chí              | ALB                               | API Gateway                        |
+| Criteria              | ALB                               | API Gateway                        |
 |-----------------------|-----------------------------------|------------------------------------|
 | Target                | EC2, ECS, Lambda                  | Lambda, DynamoDB, SQS, Step Functions, HTTP endpoint |
-| Auth                  | Dùng Cognito hoặc OIDC            | IAM, Cognito, Lambda Authorizer, API Keys |
-| Rate Limiting         | Không có sẵn (cần WAF)            | Có sẵn, cấu hình dễ dàng           |
-| Request Validation    | Không                             | Có (JSON Schema)                   |
-| Documentation         | Không                             | Tự động generate Swagger/OpenAPI   |
-| Chi phí               | Theo giờ chạy + LCU                | Theo số request + data transfer    |
-| Phù hợp khi           | Backend là EC2/ECS, cần WebSocket | Backend là Lambda, cần quản lý API đầy đủ |
+| Auth                  | Use Cognito or OIDC               | IAM, Cognito, Lambda Authorizer, API Keys |
+| Rate Limiting         | Not built-in (needs WAF)          | Built-in, easy to configure        |
+| Request Validation    | No                                | Yes (JSON Schema)                  |
+| Documentation         | No                                | Auto-generate Swagger/OpenAPI      |
+| Cost                  | Per running hour + LCU            | Per request + data transfer        |
+| Suitable when         | Backend is EC2/ECS, need WebSocket | Backend is Lambda, need full API management |
 
-### Mẹo thực tế
-- Dùng **HTTP API** thay vì REST API nếu chỉ cần proxy đến Lambda - rẻ hơn ~70%
-- **Mapping Template** chỉ cần khi làm API transformation phức tạp, còn không thì dùng Lambda proxy integration (pass-through) cho đơn giản
-- **Stages** cho phép bạn có `dev`, `staging`, `prod` cùng 1 API, mỗi stage có config riêng (throttling, cache, logging)
-- Kết hợp **CloudFront + API Gateway** để có edge caching toàn cầu cho API response
+### Practical Tips
+- Use **HTTP API** instead of REST API if you only need to proxy to Lambda - ~70% cheaper
+- **Mapping Templates** only needed for complex API transformation; otherwise use Lambda proxy integration (pass-through) for simplicity
+- **Stages** let you have `dev`, `staging`, `prod` on the same API, each stage with separate config (throttling, cache, logging)
+- Combine **CloudFront + API Gateway** for global edge caching of API responses

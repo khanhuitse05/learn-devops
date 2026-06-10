@@ -1,38 +1,38 @@
 # AWS Security & Identity Services
 
-Bảo mật là nền tảng của AWS. Các dịch vụ chính: **IAM** (quản lý quyền), **Cognito** (xác thực người dùng), **WAF & Shield** (chống tấn công), **KMS** (mã hóa), **Secrets Manager**, và **ACM** (chứng chỉ SSL/TLS).
+Security is the foundation of AWS. Key services: **IAM** (permission management), **Cognito** (user authentication), **WAF & Shield** (attack protection), **KMS** (encryption), **Secrets Manager**, and **ACM** (SSL/TLS certificates).
 
 ---
 
-## 1. Bảng tổng quan các dịch vụ
+## 1. Services Overview
 
-| Dịch vụ          | Vai trò                                           | Use case chính                                          |
-|------------------|---------------------------------------------------|---------------------------------------------------------|
-| IAM              | Quản lý user, role, permission (ai được làm gì)    | Phân quyền nhân viên, app-to-service access              |
-| Cognito          | Xác thực & quản lý user pool cho app               | Login/Register cho mobile/web app                       |
-| WAF              | Web Application Firewall (chống SQLi, XSS, bot)    | Bảo vệ web app ở layer 7                                |
-| Shield           | Chống DDoS (tầng 3/4 và 7)                         | Bảo vệ hạ tầng khỏi DDoS volumetric                      |
-| KMS              | Quản lý encryption key                            | Mã hóa dữ liệu (S3, EBS, RDS, Secrets...)               |
-| Secrets Manager  | Lưu trữ & tự động rotate secrets (DB password, API key) | Quản lý credential an toàn, auto rotate              |
-| ACM              | Cấp & quản lý SSL/TLS certificate (miễn phí)       | HTTPS cho ALB, CloudFront, API Gateway                   |
-| GuardDuty        | Threat detection (phát hiện xâm nhập)              | Giám sát an ninh tự động                                |
-| Inspector        | Vulnerability scanning (quét lỗ hổng)              | Quét EC2, ECR image, Lambda tìm CVE                     |
+| Service          | Role                                              | Primary Use Case                                         |
+|------------------|---------------------------------------------------|----------------------------------------------------------|
+| IAM              | Manage users, roles, permissions (who can do what)| Employee access control, app-to-service access            |
+| Cognito          | Authentication & user pool management for apps    | Login/Register for mobile/web apps                       |
+| WAF              | Web Application Firewall (block SQLi, XSS, bots)  | Protect web apps at layer 7                              |
+| Shield           | DDoS protection (layer 3/4 and 7)                 | Protect infrastructure from volumetric DDoS               |
+| KMS              | Encryption key management                         | Encrypt data (S3, EBS, RDS, Secrets...)                   |
+| Secrets Manager  | Store & auto-rotate secrets (DB password, API key)| Secure credential management, auto rotation               |
+| ACM              | Issue & manage SSL/TLS certificates (free)        | HTTPS for ALB, CloudFront, API Gateway                    |
+| GuardDuty        | Threat detection                                  | Automated security monitoring                             |
+| Inspector        | Vulnerability scanning                            | Scan EC2, ECR images, Lambda for CVEs                    |
 
 ---
 
 ## 2. IAM (Identity and Access Management)
 
-### IAM là gì?
-IAM kiểm soát **ai** (user/role) được làm **gì** (action) với **tài nguyên nào** (resource) trên AWS.
+### What is IAM?
+IAM controls **who** (user/role) can do **what** (action) on **which resources** (resource) in AWS.
 
 ### IAM Core Components
 
-| Thành phần     | Mô tả                                                              |
-|----------------|--------------------------------------------------------------------|
-| User           | Người dùng (nhân viên), có credentials (password + access key)      |
-| Group          | Nhóm user (Dev, Admin, ReadOnly) để gán policy hàng loạt            |
-| Role           | Identity cho service (EC2, Lambda, ECS Task) – app assume role để gọi API |
-| Policy         | JSON document định nghĩa quyền (Allow/Deny)                        |
+| Component     | Description                                                          |
+|---------------|----------------------------------------------------------------------|
+| User          | People (employees), have credentials (password + access key)          |
+| Group         | Group of users (Dev, Admin, ReadOnly) to assign policies in bulk      |
+| Role          | Identity for services (EC2, Lambda, ECS Task) – app assumes role to call APIs |
+| Policy        | JSON document defining permissions (Allow/Deny)                      |
 
 ### IAM Policy Structure
 
@@ -47,166 +47,166 @@ IAM kiểm soát **ai** (user/role) được làm **gì** (action) với **tài 
 }
 ```
 
-### Best Practices IAM
+### IAM Best Practices
 
-| Practice                        | Mô tả                                                         |
-|---------------------------------|---------------------------------------------------------------|
-| Least Privilege Principle       | Chỉ cấp đúng quyền cần thiết, không cấp thừa                    |
-| IAM Role thay vì Access Key     | Cho service-to-service (EC2 gọi S3, ECS gọi DynamoDB)          |
-| MFA cho root user & admin       | Bắt buộc xác thực 2 lớp cho root và user có quyền admin        |
-| Password Policy mạnh            | Bắt buộc: độ dài, ký tự đặc biệt, expire định kỳ               |
-| Rotate Access Key định kỳ       | Không dùng access key cũ >90 ngày                              |
-| IAM Access Analyzer             | Kiểm tra resource nào đang public ra ngoài (S3 bucket...)      |
-| Không dùng Root cho daily work  | Tạo admin IAM user riêng, root chỉ dùng cho việc khẩn cấp      |
+| Practice                        | Description                                                    |
+|---------------------------------|----------------------------------------------------------------|
+| Least Privilege Principle       | Grant only necessary permissions, nothing extra                 |
+| IAM Role instead of Access Key  | For service-to-service (EC2 calling S3, ECS calling DynamoDB)   |
+| MFA for root user & admins      | Require 2-factor auth for root and users with admin privileges  |
+| Strong Password Policy          | Enforce: minimum length, special characters, periodic expiration |
+| Rotate Access Keys regularly    | Don't use access keys older than 90 days                        |
+| IAM Access Analyzer             | Check which resources are publicly exposed (S3 buckets...)     |
+| Don't use Root for daily work   | Create a separate admin IAM user; root only for emergencies     |
 
 ### IAM Role vs IAM User
 
-| Tiêu chí          | IAM User                                | IAM Role                                 |
+| Criteria          | IAM User                                | IAM Role                                 |
 |-------------------|-----------------------------------------|------------------------------------------|
-| Ai dùng?          | Con người (nhân viên)                   | Service (EC2, Lambda, ECS) hoặc cross-account |
-| Credentials       | Password + Access Key (vĩnh viễn)       | Temporary token (tự động rotate)          |
-| Bảo mật           | Dễ lộ nếu không rotate key              | An toàn hơn (token ngắn hạn)             |
-| Nên dùng khi      | Người cần AWS Console/CLI               | App/service cần gọi AWS API               |
+| Who uses it?      | People (employees)                      | Services (EC2, Lambda, ECS) or cross-account |
+| Credentials       | Password + Access Key (permanent)       | Temporary token (auto-rotated)            |
+| Security          | Vulnerable if keys aren't rotated       | More secure (short-lived token)           |
+| Use when          | Person needs AWS Console/CLI            | App/service needs to call AWS APIs        |
 
 ---
 
-## 3. Cognito – Xác thực người dùng cho app
+## 3. Cognito – User Authentication for Apps
 
-### Cognito là gì?
-Cognito giúp bạn thêm login/register vào app mà không cần code backend auth. Hỗ trợ: email/password, Google, Facebook, Apple, SAML, OIDC.
+### What is Cognito?
+Cognito lets you add login/register to your app without coding backend auth. Supports: email/password, Google, Facebook, Apple, SAML, OIDC.
 
 ### Cognito User Pool vs Identity Pool
 
-| Thành phần      | Vai trò                                                 | Khi nào dùng                                     |
-|-----------------|---------------------------------------------------------|--------------------------------------------------|
-| User Pool       | Database người dùng (đăng ký, đăng nhập, quên mật khẩu)  | App cần login/register riêng                    |
-| Identity Pool   | Cấp temporary AWS credentials cho user đã xác thực       | User đã login (qua User Pool hoặc social) cần truy cập thẳng S3, DynamoDB |
+| Component       | Role                                                    | When to use                                  |
+|-----------------|---------------------------------------------------------|----------------------------------------------|
+| User Pool       | User database (sign up, sign in, forgot password)       | App needs its own login/register             |
+| Identity Pool   | Grants temporary AWS credentials to authenticated users | Users already logged in (via User Pool or social) need direct S3/DynamoDB access |
 
 ### Cognito Features
 
-| Tính năng                  | Mô tả                                                         |
-|----------------------------|---------------------------------------------------------------|
-| Hosted UI                  | Giao diện login có sẵn (tùy chỉnh logo, màu)                   |
-| JWT Token                  | Trả về ID Token, Access Token, Refresh Token sau login         |
-| MFA                        | SMS, TOTP (Google Authenticator)                              |
-| Advanced Security          | Phát hiện compromised credential, adaptive auth               |
-| Lambda Triggers            | Custom logic trước/sau login (pre-signup, post-confirmation...) |
-| Federation                 | Login bằng Google, Facebook, Apple, SAML IdP                   |
+| Feature                    | Description                                                       |
+|----------------------------|-------------------------------------------------------------------|
+| Hosted UI                  | Built-in login interface (customizable logo, colors)              |
+| JWT Token                  | Returns ID Token, Access Token, Refresh Token after login         |
+| MFA                        | SMS, TOTP (Google Authenticator)                                  |
+| Advanced Security          | Compromised credential detection, adaptive auth                   |
+| Lambda Triggers            | Custom logic before/after login (pre-signup, post-confirmation...)|
+| Federation                 | Login with Google, Facebook, Apple, SAML IdP                      |
 
-### Cognito Flow điển hình
+### Typical Cognito Flow
 
 ```
 [Mobile App]
     ↓ (1) Login: email + password
 [Cognito User Pool]
-    ↓ (2) Trả về JWT Token (ID + Access + Refresh)
+    ↓ (2) Returns JWT Token (ID + Access + Refresh)
 [Mobile App]
-    ↓ (3) Gọi API Gateway với JWT trong header
-[API Gateway + Cognito Authorizer] → validate JWT → gọi Lambda/ECS
+    ↓ (3) Calls API Gateway with JWT in header
+[API Gateway + Cognito Authorizer] → validates JWT → calls Lambda/ECS
 ```
 
 ---
 
-## 4. WAF & Shield – Chống tấn công
+## 4. WAF & Shield – Attack Protection
 
 ### AWS WAF (Web Application Firewall)
-WAF bảo vệ web app ở **layer 7** (HTTP/HTTPS). Gắn vào CloudFront, ALB, API Gateway, hoặc AppSync.
+WAF protects web apps at **layer 7** (HTTP/HTTPS). Attached to CloudFront, ALB, API Gateway, or AppSync.
 
-| WAF Rule Type            | Mô tả                                                      |
-|--------------------------|------------------------------------------------------------|
-| AWS Managed Rules        | Rule có sẵn: SQL injection, XSS, PHP/WordPress attack       |
-| Rate-based Rule          | Chặn IP gửi >N request/5 phút                               |
-| IP Set                   | Allow/Block list IP cụ thể                                  |
-| Regex Rule               | Match pattern trong request body/header/URI                 |
-| Geo Match                | Block/Allow theo quốc gia                                   |
+| WAF Rule Type            | Description                                                    |
+|--------------------------|----------------------------------------------------------------|
+| AWS Managed Rules        | Built-in rules: SQL injection, XSS, PHP/WordPress attacks      |
+| Rate-based Rule          | Block IPs sending >N requests/5 minutes                        |
+| IP Set                   | Allow/Block specific IPs                                       |
+| Regex Rule               | Match patterns in request body/header/URI                       |
+| Geo Match                | Block/Allow by country                                         |
 
 ### AWS Shield
-Chống DDoS. 2 tier:
+DDoS protection. 2 tiers:
 
-| Tier        | Mô tả                                                        | Chi phí         |
-|-------------|--------------------------------------------------------------|-----------------|
-| Shield Standard | Miễn phí, tự động bảo vệ layer 3/4 cho mọi AWS resource    | $0              |
-| Shield Advanced| Bảo vệ layer 7, có DDoS Response Team (DRT), cost protection | $3,000/tháng    |
+| Tier           | Description                                                    | Cost            |
+|----------------|----------------------------------------------------------------|-----------------|
+| Shield Standard| Free, automatic layer 3/4 protection for all AWS resources     | $0              |
+| Shield Advanced| Layer 7 protection, DDoS Response Team (DRT), cost protection  | $3,000/month    |
 
-### Mẹo thực tế
-- Gắn WAF vào **CloudFront** (thay vì ALB trực tiếp) để chặn attack ở edge, giảm tải cho backend
-- Dùng **Rate-based Rule** để chống brute-force login
-- Shield Advanced có **cost protection**: nếu DDoS làm tăng phí CloudFront/ALB, AWS refund
-- Kết hợp WAF + CloudFront + Shield = bảo vệ toàn diện
+### Practical Tips
+- Attach WAF to **CloudFront** (instead of ALB directly) to block attacks at the edge, reducing backend load
+- Use **Rate-based Rules** to prevent brute-force login
+- Shield Advanced has **cost protection**: if DDoS spikes CloudFront/ALB fees, AWS refunds
+- Combine WAF + CloudFront + Shield = comprehensive protection
 
 ---
 
 ## 5. KMS (Key Management Service)
 
-### KMS là gì?
-KMS quản lý encryption key dùng để mã hóa dữ liệu. Hầu hết các dịch vụ AWS dùng KMS để encrypt (S3, EBS, RDS, Secrets Manager, CloudWatch Logs...).
+### What is KMS?
+KMS manages encryption keys used to encrypt data. Most AWS services use KMS for encryption (S3, EBS, RDS, Secrets Manager, CloudWatch Logs...).
 
 ### KMS Key Types
 
-| Loại                    | Ai quản lý key?         | Dùng khi nào                                   |
-|-------------------------|--------------------------|------------------------------------------------|
-| AWS Owned Key           | AWS (miễn phí, mặc định) | Mặc định cho S3 SSE-S3, EBS encryption         |
-| AWS Managed Key         | AWS (tạo tự động)        | Khi bạn bật encryption cho RDS, DynamoDB...    |
-| Customer Managed Key (CMK) | Bạn quản lý hoàn toàn  | Cần audit trail, kiểm soát rotation, cross-account |
+| Type                    | Who manages the key?      | When to use                                     |
+|-------------------------|---------------------------|-------------------------------------------------|
+| AWS Owned Key           | AWS (free, default)       | Default for S3 SSE-S3, EBS encryption           |
+| AWS Managed Key         | AWS (auto-created)        | When you enable encryption for RDS, DynamoDB... |
+| Customer Managed Key (CMK) | You fully manage       | Need audit trail, rotation control, cross-account |
 
 ### KMS Features
-- **Key Rotation**: CMK có thể tự động rotate hàng năm (không cần re-encrypt)
-- **Envelope Encryption**: Dùng CMK mã hóa data key, data key mã hóa dữ liệu thực
-- **Cross-Account Access**: Chia sẻ CMK cho account khác qua Key Policy
+- **Key Rotation**: CMK can auto-rotate annually (no re-encryption needed)
+- **Envelope Encryption**: Uses CMK to encrypt data keys, data keys encrypt actual data
+- **Cross-Account Access**: Share CMK with other accounts via Key Policy
 
 ---
 
 ## 6. Secrets Manager & ACM
 
 ### Secrets Manager
-Lưu trữ credential (DB password, API key, OAuth token...) an toàn. Khác với Parameter Store (SSM) ở chỗ:
-- **Auto rotate**: Tự động đổi password RDS, DocumentDB theo lịch (dùng Lambda)
+Stores credentials (DB password, API key, OAuth token...) securely. Differs from Parameter Store (SSM) in that:
+- **Auto rotate**: Automatically rotate RDS, DocumentDB passwords on schedule (using Lambda)
 - **Cross-account sharing**
-- Tích hợp thẳng với RDS, DocumentDB, Redshift
+- Direct integration with RDS, DocumentDB, Redshift
 
 ### ACM (AWS Certificate Manager)
-Cấp SSL/TLS certificate **miễn phí** cho AWS services. Tự động renew trước khi hết hạn. Tích hợp thẳng vào ALB, CloudFront, API Gateway, NLB.
+Issues **free** SSL/TLS certificates for AWS services. Auto-renews before expiration. Directly integrated with ALB, CloudFront, API Gateway, NLB.
 
-| Tính năng             | Mô tả                                                          |
-|-----------------------|----------------------------------------------------------------|
-| Public Certificate    | Miễn phí, dùng cho domain public (example.com)                  |
-| Private Certificate   | Dùng nội bộ (VPC, internal domain), cần Private CA ($400/tháng) |
-| DNS Validation        | Cấp bằng cách thêm CNAME record vào Route 53 (auto nếu cùng account) |
-| Email Validation      | Cấp bằng cách xác minh qua email domain owner                   |
+| Feature              | Description                                                       |
+|----------------------|-------------------------------------------------------------------|
+| Public Certificate   | Free, for public domains (example.com)                            |
+| Private Certificate  | For internal use (VPC, internal domains), requires Private CA ($400/month) |
+| DNS Validation       | Issued by adding CNAME record to Route 53 (auto if same account)  |
+| Email Validation     | Issued by verifying via domain owner email                        |
 
-### Mẹo thực tế
-- **Secrets Manager rẻ hơn Parameter Store** nếu bạn cần rotate; nếu chỉ lưu static config, dùng **Parameter Store** (miễn phí cho Standard)
-- **ACM + Route 53** cùng account: DNS validation tự động, không cần can thiệp thủ công
-- Dùng **Secrets Manager** cho RDS master password, API key third-party; không hardcode vào code
+### Practical Tips
+- **Secrets Manager is cheaper than Parameter Store** if you need rotation; if only storing static config, use **Parameter Store** (free for Standard tier)
+- **ACM + Route 53** same account: DNS validation is automatic, no manual intervention
+- Use **Secrets Manager** for RDS master passwords, third-party API keys; never hardcode in code
 
 ---
 
 ## 7. Shared Responsibility Model
 
-AWS bảo mật **OF** the cloud, bạn bảo mật **IN** the cloud.
+AWS secures **OF** the cloud, you secure **IN** the cloud.
 
-| AWS lo                              | Bạn lo                                          |
+| AWS Handles                         | You Handle                                      |
 |-------------------------------------|-------------------------------------------------|
-| Bảo vệ data center (vật lý)         | Cấu hình Security Group đúng                    |
-| Bảo vệ hardware, hypervisor         | Mã hóa dữ liệu (enable encryption)              |
-| Patch OS của managed service        | Patch OS của EC2 bạn tự quản                    |
-| IAM infrastructure                  | Cấu hình IAM policy đúng (least privilege)      |
-| DDoS protection (Shield Standard)   | Viết code an toàn (không SQL injection)         |
+| Physical data center protection     | Proper Security Group configuration             |
+| Hardware, hypervisor protection     | Encrypt data (enable encryption)                |
+| Patch OS of managed services        | Patch OS of EC2 you manage                      |
+| IAM infrastructure                  | Configure IAM policies correctly (least privilege)|
+| DDoS protection (Shield Standard)   | Write secure code (no SQL injection)            |
 
 ---
 
-## 8. Tóm tắt chọn dịch vụ
+## 8. Service Selection Summary
 
-| Nhu cầu                                                              | Dịch vụ                     |
+| Need                                                                 | Service                     |
 |----------------------------------------------------------------------|-----------------------------|
-| Quản lý quyền nhân viên & service                                     | **IAM**                     |
-| Thêm login/register cho mobile/web app                                | **Cognito User Pool**       |
-| User login rồi cần truy cập thẳng S3                                  | **Cognito Identity Pool**   |
-| Chống SQL injection, XSS, rate limiting                              | **AWS WAF**                 |
-| Chống DDoS volumetric lớn                                             | **AWS Shield Advanced**     |
-| Mã hóa dữ liệu, quản lý key                                          | **KMS**                     |
-| Lưu DB password, API key & auto rotate                               | **Secrets Manager**         |
-| Cấp SSL/TLS miễn phí cho domain                                      | **ACM**                     |
-| Phát hiện xâm nhập, suspicious activity                              | **GuardDuty**               |
-| Quét lỗ hổng EC2, container image                                    | **Inspector**               |
-| Lưu config không cần rotate (feature flag, URL)                      | **SSM Parameter Store**     |
+| Manage employee & service permissions                                | **IAM**                     |
+| Add login/register to mobile/web app                                 | **Cognito User Pool**       |
+| Authenticated users need direct S3 access                            | **Cognito Identity Pool**   |
+| Block SQL injection, XSS, rate limiting                              | **AWS WAF**                 |
+| Protect against large volumetric DDoS                                | **AWS Shield Advanced**     |
+| Encrypt data, manage keys                                            | **KMS**                     |
+| Store DB password, API key & auto-rotate                             | **Secrets Manager**         |
+| Issue free SSL/TLS certificate for domain                            | **ACM**                     |
+| Detect intrusions, suspicious activity                               | **GuardDuty**               |
+| Scan EC2 vulnerabilities, container images                           | **Inspector**               |
+| Store config without rotation (feature flags, URLs)                  | **SSM Parameter Store**     |

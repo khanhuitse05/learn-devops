@@ -1,179 +1,179 @@
 # AWS Database Services
 
-AWS cung cấp nhiều loại database cho các nhu cầu khác nhau: **RDS** (quan hệ), **Aurora** (quan hệ cloud-native), **DynamoDB** (NoSQL key-value/serverless), và **ElastiCache** (in-memory cache).
+AWS provides various database types for different needs: **RDS** (relational), **Aurora** (cloud-native relational), **DynamoDB** (NoSQL key-value/serverless), and **ElastiCache** (in-memory cache).
 
 ---
 
-## 1. Bảng so sánh tổng quan
+## 1. Overview Comparison Table
 
-| Dịch vụ       | Loại                     | Mô hình              | Engine hỗ trợ                                    | Scaling                 | Use case chính                              |
-|---------------|--------------------------|----------------------|--------------------------------------------------|-------------------------|---------------------------------------------|
-| RDS           | Quan hệ (SQL)            | Managed              | PostgreSQL, MySQL, MariaDB, Oracle, SQL Server    | Vertical + Read Replica | Ứng dụng truyền thống, CMS, ERP             |
-| Aurora        | Quan hệ (SQL) Cloud-Native| Managed (tối ưu)     | MySQL-compatible, PostgreSQL-compatible           | Vertical + Auto Read Replica + Aurora Serverless | High-performance, global app           |
-| DynamoDB      | NoSQL (Key-Value/Document)| Serverless           | AWS proprietary                                   | Horizontal auto (on-demand) | Mobile/web app, session store, real-time |
-| ElastiCache   | In-memory Cache           | Managed              | Redis, Memcached                                  | Horizontal (sharding/cluster) | Cache, session, real-time leaderboard |
+| Service      | Type                       | Model               | Supported Engines                               | Scaling                 | Primary Use Case                            |
+|--------------|----------------------------|---------------------|-------------------------------------------------|-------------------------|---------------------------------------------|
+| RDS          | Relational (SQL)           | Managed             | PostgreSQL, MySQL, MariaDB, Oracle, SQL Server   | Vertical + Read Replica | Traditional apps, CMS, ERP                  |
+| Aurora       | Relational (SQL) Cloud-Native| Managed (optimized) | MySQL-compatible, PostgreSQL-compatible          | Vertical + Auto Read Replica + Aurora Serverless | High-performance, global apps         |
+| DynamoDB     | NoSQL (Key-Value/Document) | Serverless          | AWS proprietary                                  | Horizontal auto (on-demand) | Mobile/web apps, session store, real-time |
+| ElastiCache  | In-memory Cache            | Managed             | Redis, Memcached                                 | Horizontal (sharding/cluster) | Cache, session, real-time leaderboard  |
 
-> **Ngoài ra còn có:** DocumentDB (MongoDB-compatible), Neptune (Graph), Keyspaces (Cassandra-compatible), Timestream (Time-series), QLDB (Ledger).
+> **Also available:** DocumentDB (MongoDB-compatible), Neptune (Graph), Keyspaces (Cassandra-compatible), Timestream (Time-series), QLDB (Ledger).
 
 ---
 
 ## 2. RDS (Relational Database Service)
 
-### RDS là gì?
-RDS là dịch vụ database quan hệ được AWS quản lý. Bạn không cần cài đặt, patch OS/DB, backup thủ công. Hỗ trợ 6 engine: PostgreSQL, MySQL, MariaDB, Oracle, SQL Server, và IBM Db2.
+### What is RDS?
+RDS is an AWS-managed relational database service. You don't need to install, patch OS/DB, or do manual backups. Supports 6 engines: PostgreSQL, MySQL, MariaDB, Oracle, SQL Server, and IBM Db2.
 
-### RDS Features cốt lõi
+### Core RDS Features
 
-| Tính năng            | Mô tả                                                                 |
-|----------------------|-----------------------------------------------------------------------|
-| Multi-AZ             | Tự động sync sang AZ khác (Standby). Khi primary chết, failover <1-2 phút |
-| Read Replica         | Bản sao chỉ đọc (read-only), scale horizontal cho read traffic         |
-| Automated Backup     | Backup tự động hàng ngày, giữ tối đa 35 ngày. Có thể point-in-time restore |
-| Manual Snapshot      | Backup thủ công, giữ vĩnh viễn (đến khi bạn xóa)                      |
-| Encryption at rest   | Dùng KMS mã hóa cả DB + snapshot + replica                            |
-| Deletion Protection  | Chống xóa nhầm database production                                    |
+| Feature              | Description                                                                |
+|----------------------|----------------------------------------------------------------------------|
+| Multi-AZ             | Automatically syncs to another AZ (Standby). When primary fails, failover <1-2 min |
+| Read Replica         | Read-only copy, horizontally scale read traffic                            |
+| Automated Backup     | Automatic daily backups, retained up to 35 days. Point-in-time restore     |
+| Manual Snapshot      | Manual backup, retained indefinitely (until you delete it)                 |
+| Encryption at rest   | Uses KMS to encrypt DB + snapshots + replicas                              |
+| Deletion Protection  | Prevents accidental deletion of production databases                       |
 
 ### RDS Multi-AZ vs Read Replica
 
-| Tiêu chí            | Multi-AZ                                     | Read Replica                                  |
+| Criteria            | Multi-AZ                                     | Read Replica                                  |
 |---------------------|----------------------------------------------|-----------------------------------------------|
-| Mục đích            | High Availability / Disaster Recovery         | Scale read traffic                            |
-| Sync                | Synchronous (đồng bộ tức thì)                 | Async (không đồng bộ, có độ trễ)               |
-| Failover            | Tự động (DNS tự chuyển sang standby)          | Phải promote thủ công (hoặc script)            |
-| Sử dụng được không? | Standby không dùng được (chỉ chờ failover)     | Đọc được (SELECT), giảm tải cho primary        |
+| Purpose             | High Availability / Disaster Recovery         | Scale read traffic                            |
+| Sync                | Synchronous (instant sync)                    | Async (not synchronous, has lag)              |
+| Failover            | Automatic (DNS auto-switches to standby)      | Must promote manually (or script)             |
+| Can it be used?     | Standby not usable (only waiting for failover)| Readable (SELECT), reduces primary load       |
 
 ### RDS Proxy
-- Pool connection từ app đến RDS, giảm stress cho database khi app scale đột ngột (Lambda)
-- Giảm thời gian failover (RDS Proxy tự reconnect)
-- Bắt buộc với Lambda + RDS (Lambda mở connection mới mỗi lần cold start → dễ bội connection pool)
+- Pools connections from app to RDS, reducing database stress when app scales suddenly (Lambda)
+- Reduces failover time (RDS Proxy auto-reconnects)
+- Essential for Lambda + RDS (Lambda opens new connections on every cold start → easily exhausts connection pool)
 
-### Mẹo thực tế
-- Dùng **gp3 storage**, không dùng Magnetic cũ
-- **Performance Insights**: Dashboard giúp xác định câu SQL nào đang chiếm CPU/RAM, xem wait events
-- **RDS Enhanced Monitoring**: Xem OS-level metrics (CPU, RAM, disk IO của từng process)
-- Bật **Deletion Protection** cho database production
+### Practical Tips
+- Use **gp3 storage**, not old Magnetic
+- **Performance Insights**: Dashboard that identifies which SQL queries are consuming CPU/RAM, shows wait events
+- **RDS Enhanced Monitoring**: View OS-level metrics (CPU, RAM, disk IO per process)
+- Enable **Deletion Protection** for production databases
 
 ---
 
-## 3. Aurora – Database Cloud-Native của AWS
+## 3. Aurora – AWS Cloud-Native Database
 
-### Aurora là gì?
-Aurora là database quan hệ do AWS tự phát triển, tương thích MySQL và PostgreSQL, nhưng được thiết kế lại để chạy trên infrastructure của AWS. Hiệu năng **cao hơn MySQL 5x, PostgreSQL 3x**.
+### What is Aurora?
+Aurora is a relational database developed by AWS, compatible with MySQL and PostgreSQL, but redesigned to run on AWS infrastructure. Performance **5x higher than MySQL, 3x higher than PostgreSQL**.
 
-### Aurora so với RDS
+### Aurora vs RDS
 
-| Tiêu chí              | RDS (MySQL/PostgreSQL)                   | Aurora                                     |
+| Criteria              | RDS (MySQL/PostgreSQL)                   | Aurora                                     |
 |-----------------------|------------------------------------------|--------------------------------------------|
-| Storage               | EBS (giới hạn 64TB)                      | Aurora Storage Engine (tự scale đến 128TB)  |
-| Replica               | Tối đa 5 Read Replica (manual)           | Tối đa 15 Aurora Replica (auto)            |
-| Replication lag       | Có thể vài giây                          | <100ms (shared storage)                    |
-| Failover              | ~1-2 phút                                | <30 giây                                   |
-| Backtrack             | Không                                    | Có (quay về điểm thời gian trước, không cần restore) |
-| Serverless            | Không                                    | Aurora Serverless v2 (auto pause/resume)   |
+| Storage               | EBS (64TB limit)                         | Aurora Storage Engine (auto-scales to 128TB)|
+| Replica               | Up to 5 Read Replicas (manual)           | Up to 15 Aurora Replicas (auto)            |
+| Replication lag       | Possibly a few seconds                   | <100ms (shared storage)                    |
+| Failover              | ~1-2 minutes                             | <30 seconds                                |
+| Backtrack             | No                                       | Yes (go back to a point in time, no restore needed) |
+| Serverless            | No                                       | Aurora Serverless v2 (auto pause/resume)   |
 | Global Database       | Cross-region Read Replica (manual)       | Aurora Global Database (cross-region, lag <1s) |
 
 ### Aurora Serverless v2
-- Database tự động scale up/down (ACU - Aurora Capacity Unit)
-- Có thể scale về 0 (pause hoàn toàn) → $0 khi không dùng
-- Phù hợp: Dev/test, app có traffic theo giờ hành chính, app mới chưa biết load
+- Database auto-scales up/down (ACU - Aurora Capacity Unit)
+- Can scale to 0 (fully paused) → $0 when idle
+- Suitable for: Dev/test, apps with business-hours traffic, new apps with unknown load
 
 ### Aurora Global Database
-- 1 Primary region (đọc/ghi) + tối đa 5 secondary region (chỉ đọc)
-- Replication cross-region với lag <1 giây
-- Failover sang region khác <1 phút (thường 30s)
-- Dùng cho: Multi-region app, DR toàn cầu
+- 1 Primary region (read/write) + up to 5 secondary regions (read-only)
+- Cross-region replication with <1 second lag
+- Failover to another region <1 minute (typically 30s)
+- Used for: Multi-region apps, global DR
 
-### Mẹo thực tế
-- **Aurora là default choice** nếu bạn cần MySQL/PostgreSQL trên AWS, trừ khi bạn cần version cụ thể Aurora chưa hỗ trợ
-- **Aurora Serverless v2** chỉ scale ACU, không về 0 giây như DynamoDB, vẫn có cold start nhẹ khi resume
-- **RDS Proxy** cũng hoạt động với Aurora, giảm connection stress
+### Practical Tips
+- **Aurora is the default choice** if you need MySQL/PostgreSQL on AWS, unless you need a specific version Aurora doesn't support
+- **Aurora Serverless v2** only scales ACU, doesn't scale to 0 instantly like DynamoDB, still has a slight cold start on resume
+- **RDS Proxy** also works with Aurora, reducing connection stress
 
 ---
 
 ## 4. DynamoDB – NoSQL Serverless
 
-### DynamoDB là gì?
-DynamoDB là NoSQL key-value/document database serverless của AWS. Không cần provision server, auto-scale về 0. Hiệu năng single-digit milisecond ở mọi quy mô.
+### What is DynamoDB?
+DynamoDB is AWS's serverless NoSQL key-value/document database. No server provisioning needed, auto-scales to zero. Single-digit millisecond performance at any scale.
 
 ### DynamoDB Core Concepts
 
-| Khái niệm        | Giải thích                                                                 |
-|------------------|----------------------------------------------------------------------------|
-| Table            | Bảng chứa items (không có schema cố định)                                   |
-| Item             | Một bản ghi (giống row trong SQL), tối đa 400KB                             |
-| Partition Key    | Khóa chính để phân mảnh dữ liệu (hash key)                                  |
-| Sort Key         | Khóa phụ để sắp xếp trong partition (range key)                             |
-| GSI (Global Secondary Index) | Index với partition/sort key khác bảng chính, dùng để query theo chiều khác |
-| LSI (Local Secondary Index)  | Index dùng chung partition key, sort key khác                               |
+| Concept           | Explanation                                                                    |
+|-------------------|--------------------------------------------------------------------------------|
+| Table             | Table containing items (no fixed schema)                                       |
+| Item              | A record (like a row in SQL), maximum 400KB                                    |
+| Partition Key     | Primary key for sharding data (hash key)                                       |
+| Sort Key          | Secondary key for sorting within a partition (range key)                       |
+| GSI (Global Secondary Index) | Index with different partition/sort keys from the base table, for querying along other dimensions |
+| LSI (Local Secondary Index)  | Index sharing the same partition key, different sort key                          |
 
 ### DynamoDB Capacity Modes
 
-| Mode               | Mô tả                                                                  | Phù hợp                              |
-|--------------------|------------------------------------------------------------------------|--------------------------------------|
-| On-Demand           | Trả tiền theo request thực tế (pay-per-request), không cần plan capacity| App mới, traffic không dự đoán được   |
-| Provisioned         | Bạn định trước RCU/WCU (Read/Write Capacity Units), rẻ hơn On-Demand   | Traffic ổn định, có thể dự đoán       |
-| Reserved            | Cam kết 1-3 năm, tiết kiệm thêm                                       | Production lâu dài                    |
+| Mode               | Description                                                           | Suitable for                         |
+|--------------------|-----------------------------------------------------------------------|--------------------------------------|
+| On-Demand           | Pay per actual request, no capacity planning needed                   | New apps, unpredictable traffic      |
+| Provisioned         | Pre-define RCU/WCU (Read/Write Capacity Units), cheaper than On-Demand| Stable, predictable traffic          |
+| Reserved            | Commit 1-3 years, additional savings                                 | Long-term production                 |
 
 ### DynamoDB Features
 
-| Tính năng                | Mô tả                                                                     |
-|--------------------------|---------------------------------------------------------------------------|
-| DAX (DynamoDB Accelerator)| In-memory cache cho DynamoDB, giảm latency từ mili-giây xuống micro-giây   |
-| Streams                  | Capture thay đổi (insert/update/delete) theo thứ tự, trigger Lambda       |
-| Global Tables            | Multi-region multi-write, sync tự động                                    |
-| TTL                      | Tự động xóa item sau thời gian nhất định                                  |
-| Encryption at rest       | Mặc định bật, không thể tắt                                               |
-| Point-in-Time Recovery   | Restore về bất kỳ thời điểm nào trong 35 ngày                             |
-| Transactions             | ACID transaction cho nhiều items (có giới hạn)                            |
+| Feature                  | Description                                                              |
+|--------------------------|--------------------------------------------------------------------------|
+| DAX (DynamoDB Accelerator)| In-memory cache for DynamoDB, reduces latency from milliseconds to microseconds |
+| Streams                  | Captures changes (insert/update/delete) in order, triggers Lambda       |
+| Global Tables            | Multi-region multi-write, automatic sync                                 |
+| TTL                      | Auto-deletes items after a specified time                                |
+| Encryption at rest       | Enabled by default, cannot be disabled                                   |
+| Point-in-Time Recovery   | Restore to any point in time within 35 days                              |
+| Transactions             | ACID transactions for multiple items (has limits)                        |
 
 ---
 
 ## 5. ElastiCache – In-Memory Cache
 
-### ElastiCache là gì?
-ElastiCache là dịch vụ managed cho Redis và Memcached. Dữ liệu nằm trong RAM → latency **micro-giây**.
+### What is ElastiCache?
+ElastiCache is a managed service for Redis and Memcached. Data resides in RAM → **microsecond** latency.
 
-### Redis vs Memcached trên ElastiCache
+### Redis vs Memcached on ElastiCache
 
-| Tiêu chí          | Redis                                        | Memcached                    |
+| Criteria          | Redis                                        | Memcached                    |
 |-------------------|----------------------------------------------|------------------------------|
-| Data structure    | String, List, Set, Sorted Set, Hash, Stream  | Key-value thuần              |
-| Persistence       | Có (snapshot + AOF)                          | Không                        |
-| Replication       | Multi-AZ + Read Replica                      | Không (thuần cache)          |
-| Pub/Sub           | Có                                           | Không                        |
-| Cluster mode      | Có (sharding)                                | Có (node ring)               |
-| Use case          | Cache nâng cao, session store, leaderboard, rate limiter | Cache đơn thuần             |
+| Data structure    | String, List, Set, Sorted Set, Hash, Stream  | Pure key-value               |
+| Persistence       | Yes (snapshot + AOF)                         | No                           |
+| Replication       | Multi-AZ + Read Replica                      | No (pure cache)              |
+| Pub/Sub           | Yes                                          | No                           |
+| Cluster mode      | Yes (sharding)                               | Yes (node ring)              |
+| Use case          | Advanced cache, session store, leaderboard, rate limiter | Simple caching only    |
 
 ### ElastiCache Patterns
 
-| Pattern              | Mô tả                                                                  |
-|----------------------|------------------------------------------------------------------------|
-| Lazy Loading         | App check cache → miss → query DB → lưu vào cache → trả về             |
-| Write Through        | App ghi vào DB + cache cùng lúc (cache luôn fresh)                     |
-| Session Store        | Lưu user session vào Redis thay vì local memory (stateless app)        |
-| Rate Limiter         | Dùng Redis INCR + EXPIRE để đếm request trong khoảng thời gian          |
-| Leaderboard          | Dùng Redis Sorted Set với ZADD và ZRANK                                |
+| Pattern              | Description                                                           |
+|----------------------|-----------------------------------------------------------------------|
+| Lazy Loading         | App checks cache → miss → query DB → save to cache → return           |
+| Write Through        | App writes to DB + cache simultaneously (cache always fresh)          |
+| Session Store        | Store user sessions in Redis instead of local memory (stateless app)  |
+| Rate Limiter         | Use Redis INCR + EXPIRE to count requests within a time window        |
+| Leaderboard          | Use Redis Sorted Set with ZADD and ZRANK                              |
 
-### Mẹo thực tế
-- **Redis Auth**: Bật AUTH token để bảo vệ Redis cluster
-- **Encryption in transit + at rest**: Bật cả hai cho production
-- **Multi-AZ**: Dùng cho Redis nếu cần HA; Memcached không có Multi-AZ
-- **Cluster Mode Enabled**: Dùng khi cần scale horizontal (shard data) >1 node group
-- Kết hợp với **RDS**: RDS làm source-of-truth, Redis làm cache nóng trước RDS
+### Practical Tips
+- **Redis Auth**: Enable AUTH token to protect the Redis cluster
+- **Encryption in transit + at rest**: Enable both for production
+- **Multi-AZ**: Use for Redis if HA is needed; Memcached has no Multi-AZ
+- **Cluster Mode Enabled**: Use when horizontal scaling (shard data) >1 node group
+- Combine with **RDS**: RDS as source-of-truth, Redis as hot cache in front of RDS
 
 ---
 
-## 6. Tóm tắt chọn database
+## 6. Database Selection Summary
 
-| Nhu cầu                                                                 | Dịch vụ                        |
-|-------------------------------------------------------------------------|--------------------------------|
-| Ứng dụng cần SQL, JOIN, transaction, schema cố định                      | **RDS** hoặc **Aurora**        |
-| Cần hiệu năng SQL cao nhất, multi-region, auto-scale                     | **Aurora**                     |
-| Chi phí tối ưu cho dev/test, traffic gián đoạn                           | **Aurora Serverless v2**       |
-| App mobile/web scale lớn, schema linh hoạt, không cần JOIN               | **DynamoDB**                   |
-| Cần cache nhanh (micro-giây), session store, pub/sub                     | **ElastiCache (Redis)**        |
-| Chỉ cần cache key-value đơn giản, không cần persist                      | **ElastiCache (Memcached)**    |
-| Cần MongoDB nhưng muốn managed                                           | **DocumentDB**                 |
+| Need                                                                     | Service                        |
+|--------------------------------------------------------------------------|--------------------------------|
+| App needs SQL, JOINs, transactions, fixed schema                         | **RDS** or **Aurora**          |
+| Need highest SQL performance, multi-region, auto-scale                   | **Aurora**                     |
+| Cost-optimized for dev/test, intermittent traffic                        | **Aurora Serverless v2**       |
+| Large-scale mobile/web app, flexible schema, no JOINs needed             | **DynamoDB**                   |
+| Need fast cache (microseconds), session store, pub/sub                   | **ElastiCache (Redis)**        |
+| Only need simple key-value cache, no persistence                         | **ElastiCache (Memcached)**    |
+| Need MongoDB but want managed                                            | **DocumentDB**                 |
 | Graph database (social network, fraud detection)                         | **Neptune**                    |
-| Dữ liệu time-series (IoT, metrics)                                       | **Timestream**                 |
-| Cần immutable ledger (audit, transaction history)                        | **QLDB**                       |
+| Time-series data (IoT, metrics)                                          | **Timestream**                 |
+| Need immutable ledger (audit, transaction history)                       | **QLDB**                       |

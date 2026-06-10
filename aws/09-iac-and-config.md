@@ -1,40 +1,40 @@
 # AWS Infrastructure as Code & Configuration
 
-Infrastructure as Code (IaC) là cách bạn định nghĩa hạ tầng AWS bằng code thay vì click thủ công trên Console. AWS cung cấp **CloudFormation**, **CDK**, và **Terraform** (third-party) là các công cụ IaC chính.
+Infrastructure as Code (IaC) is how you define AWS infrastructure using code instead of clicking manually in the Console. AWS provides **CloudFormation**, **CDK**, and **Terraform** (third-party) as the main IaC tools.
 
 ---
 
-## 1. Bảng tổng quan
+## 1. Overview Table
 
-| Công cụ         | Loại                | Ngôn ngữ                                  | State management         | Độ phổ biến         |
+| Tool            | Type                | Language                                  | State management         | Popularity           |
 |-----------------|---------------------|-------------------------------------------|--------------------------|----------------------|
-| CloudFormation  | AWS native IaC      | YAML/JSON                                 | Tự động (AWS quản lý)    | Trong hệ sinh thái AWS |
-| AWS CDK         | AWS native IaC      | TypeScript, Python, Java, C#, Go          | Qua CloudFormation       | Đang tăng nhanh      |
-| Terraform       | Third-party IaC     | HCL (HashiCorp Language)                  | Tự quản lý (state file)   | Phổ biến nhất multi-cloud |
-| Pulumi          | Third-party IaC     | TypeScript, Python, Go, C#               | Tự quản lý (state file)   | Mới nổi             |
+| CloudFormation  | AWS native IaC      | YAML/JSON                                 | Automatic (AWS managed)  | Within AWS ecosystem |
+| AWS CDK         | AWS native IaC      | TypeScript, Python, Java, C#, Go          | Via CloudFormation       | Growing rapidly      |
+| Terraform       | Third-party IaC     | HCL (HashiCorp Language)                  | Self-managed (state file) | Most popular for multi-cloud |
+| Pulumi          | Third-party IaC     | TypeScript, Python, Go, C#               | Self-managed (state file) | Emerging             |
 
 ---
 
-## 2. CloudFormation – IaC gốc của AWS
+## 2. CloudFormation – AWS Native IaC
 
-### CloudFormation là gì?
-Bạn viết template YAML/JSON mô tả toàn bộ hạ tầng (VPC, ALB, ECS, RDS...), CloudFormation sẽ tạo, cập nhật, và xóa tài nguyên theo đúng thứ tự phụ thuộc.
+### What is CloudFormation?
+You write YAML/JSON templates describing your entire infrastructure (VPC, ALB, ECS, RDS...), and CloudFormation creates, updates, and deletes resources in the correct dependency order.
 
 ### CloudFormation Core Concepts
 
-| Khái niệm        | Mô tả                                                           |
-|------------------|-----------------------------------------------------------------|
-| Template          | File YAML/JSON định nghĩa hạ tầng (resources, parameters, outputs) |
-| Stack             | Một instance của template (1 stack = 1 bộ tài nguyên được tạo ra) |
-| Resource          | 1 tài nguyên AWS (EC2, S3, RDS...)                              |
-| Parameter         | Input động khi tạo stack (vd: InstanceType, DBPassword)         |
-| Output            | Output sau khi tạo (vd: ALB DNS Name, S3 Bucket URL)            |
-| Condition         | Logic if-else trong template (vd: tạo Production hay Dev)       |
-| Mapping           | Lookup table (vd: AMI ID theo region)                           |
-| Change Set        | Preview thay đổi trước khi apply (diff giữa template cũ và mới) |
-| Drift Detection   | Phát hiện tài nguyên bị thay đổi ngoài CloudFormation           |
+| Concept          | Description                                                         |
+|------------------|---------------------------------------------------------------------|
+| Template         | YAML/JSON file defining infrastructure (resources, parameters, outputs) |
+| Stack            | An instance of a template (1 stack = 1 set of created resources)    |
+| Resource         | 1 AWS resource (EC2, S3, RDS...)                                    |
+| Parameter        | Dynamic input when creating a stack (e.g.: InstanceType, DBPassword)|
+| Output           | Output after creation (e.g.: ALB DNS Name, S3 Bucket URL)           |
+| Condition        | If-else logic in templates (e.g.: create Production or Dev)         |
+| Mapping          | Lookup table (e.g.: AMI ID by region)                               |
+| Change Set       | Preview changes before applying (diff between old and new template) |
+| Drift Detection  | Detect resources changed outside of CloudFormation                  |
 
-### CloudFormation Template Ví dụ
+### CloudFormation Template Example
 
 ```yaml
 AWSTemplateFormatVersion: '2010-09-09'
@@ -60,41 +60,41 @@ Outputs:
     Description: Name of the S3 bucket
 ```
 
-### CloudFormation Ưu & Nhược
+### CloudFormation Pros & Cons
 
-| Ưu điểm                                              | Nhược điểm                                           |
-|------------------------------------------------------|-----------------------------------------------------|
-| Tích hợp sâu nhất với AWS (service mới có CFN support ngày 1) | YAML/JSON verbose, không có code logic (if/loop) |
-| State tự động quản lý, không cần lưu file riêng        | Khó tái sử dụng (phải dùng nested stack/module)     |
-| Rollback tự động nếu tạo lỗi                           | Không hỗ trợ multi-cloud                           |
-| Drift detection: biết khi nào tài nguyên bị sửa tay    | Chỉ chạy trên AWS                                   |
+| Pros                                                  | Cons                                                |
+|-------------------------------------------------------|-----------------------------------------------------|
+| Deepest AWS integration (new services get CFN support day 1) | YAML/JSON verbose, no real code logic (if/loop) |
+| State auto-managed, no need to store separate file    | Hard to reuse (must use nested stacks/modules)      |
+| Auto-rollback if creation fails                       | No multi-cloud support                              |
+| Drift detection: know when resources are manually changed | AWS-only                                          |
 
-### Mẹo thực tế
-- Dùng **Change Set** trước khi apply để biết chính xác cái gì sẽ thay đổi
-- **Nested Stack** hoặc **StackSet** để quản lý nhiều stack (multi-account, multi-region)
-- Dùng **DeletionPolicy: Retain** cho S3, RDS để không bị xóa khi xóa stack
-- CloudFormation có **rollback triggers** (CloudWatch Alarm) để auto-rollback nếu app lỗi sau deploy
+### Practical Tips
+- Use **Change Set** before applying to know exactly what will change
+- **Nested Stack** or **StackSet** to manage multiple stacks (multi-account, multi-region)
+- Use **DeletionPolicy: Retain** for S3, RDS to prevent deletion when deleting a stack
+- CloudFormation has **rollback triggers** (CloudWatch Alarm) to auto-rollback if the app fails after deployment
 
 ---
 
-## 3. AWS CDK – IaC bằng code thực thụ
+## 3. AWS CDK – IaC with Real Code
 
-### CDK là gì?
-CDK cho phép bạn viết infrastructure bằng TypeScript, Python, Java, C#, Go. CDK tổng hợp (synthesize) code thành CloudFormation template và deploy. Về bản chất, CDK = code compiler ra CloudFormation.
+### What is CDK?
+CDK lets you write infrastructure using TypeScript, Python, Java, C#, Go. CDK synthesizes code into a CloudFormation template and deploys it. Essentially, CDK = a code compiler that outputs CloudFormation.
 
 ### CDK Core Concepts
 
-| Khái niệm    | Mô tả                                                        |
-|--------------|--------------------------------------------------------------|
-| App          | Root của CDK application                                     |
-| Stack        | Nhóm tài nguyên (map 1-1 với CloudFormation stack)            |
-| Construct    | Đơn vị cơ bản: 1 construct = 1 hoặc nhiều tài nguyên          |
-| L1 Construct | Low-level, 1-1 với CloudFormation resource (ít dùng)          |
-| L2 Construct | High-level, có default hợp lý + helper method (dùng chính)     |
-| L3 Construct | Pattern: tổ hợp sẵn nhiều tài nguyên (vd: EcsServiceWithALB) |
-| Environment  | Target AWS account + region để deploy                        |
+| Concept     | Description                                                        |
+|-------------|--------------------------------------------------------------------|
+| App         | Root of the CDK application                                        |
+| Stack       | Group of resources (maps 1-1 with CloudFormation stack)            |
+| Construct   | Basic unit: 1 construct = 1 or more resources                       |
+| L1 Construct| Low-level, 1-1 with CloudFormation resource (rarely used)           |
+| L2 Construct| High-level, has sensible defaults + helper methods (primary use)    |
+| L3 Construct| Pattern: pre-built combination of multiple resources (e.g.: EcsServiceWithALB) |
+| Environment | Target AWS account + region for deployment                         |
 
-### CDK Code Ví dụ (TypeScript)
+### CDK Code Example (TypeScript)
 
 ```typescript
 import * as cdk from 'aws-cdk-lib';
@@ -114,41 +114,41 @@ new s3.Bucket(stack, 'MyBucket', {
 
 ### CDK vs CloudFormation
 
-| Tiêu chí          | CloudFormation                    | CDK                                   |
+| Criteria          | CloudFormation                    | CDK                                   |
 |-------------------|-----------------------------------|---------------------------------------|
-| Ngôn ngữ          | YAML/JSON                         | TypeScript, Python, Java, C#, Go      |
-| Code logic        | Hạn chế (Conditions, !If)         | Đầy đủ (if/else, for loop, function)  |
-| Tái sử dụng       | Nested stack, modules             | Construct library, OOP inheritance    |
-| Learning curve    | Dễ hơn (declarative)              | Cần biết programming + CFN concepts   |
-| IDE support       | Kém (YAML validation cơ bản)      | Tốt (autocomplete, type check)        |
-| Phù hợp           | Hạ tầng nhỏ, đơn giản             | Hạ tầng phức tạp, team dev            |
+| Language          | YAML/JSON                         | TypeScript, Python, Java, C#, Go      |
+| Code logic        | Limited (Conditions, !If)         | Full (if/else, for loop, functions)   |
+| Reusability       | Nested stacks, modules            | Construct library, OOP inheritance    |
+| Learning curve    | Easier (declarative)              | Need programming + CFN concepts       |
+| IDE support       | Poor (basic YAML validation)      | Good (autocomplete, type checking)    |
+| Suitable for      | Small, simple infrastructure      | Complex infrastructure, dev teams     |
 
 ### CDK Best Practices
-- Dùng **L2/L3 Constructs** khi có thể, tránh L1
-- Tổ chức code: **stack riêng cho stateful (RDS, S3)** và **stateless (ECS, Lambda)** để tránh vô tình xóa dữ liệu
-- Dùng **CDK Pipelines** để CI/CD luôn cho hạ tầng
-- **cdk diff** trước khi deploy để xem thay đổi
-- Dùng **Context values** (cdk.json) thay vì hardcode account/region
+- Use **L2/L3 Constructs** whenever possible, avoid L1
+- Organize code: **separate stacks for stateful (RDS, S3)** and **stateless (ECS, Lambda)** to avoid accidentally deleting data
+- Use **CDK Pipelines** for CI/CD of infrastructure itself
+- **cdk diff** before deploying to see changes
+- Use **Context values** (cdk.json) instead of hardcoding account/region
 
 ---
 
 ## 4. Terraform
 
-### Terraform là gì?
-Terraform (HashiCorp) là công cụ IaC phổ biến nhất, hỗ trợ **multi-cloud** (AWS, GCP, Azure, Kubernetes...). Dùng HCL (HashiCorp Language) để định nghĩa hạ tầng.
+### What is Terraform?
+Terraform (HashiCorp) is the most popular IaC tool, supporting **multi-cloud** (AWS, GCP, Azure, Kubernetes...). Uses HCL (HashiCorp Language) to define infrastructure.
 
 ### Terraform vs CloudFormation/CDK
 
-| Tiêu chí          | Terraform                          | CloudFormation/CDK                |
+| Criteria          | Terraform                          | CloudFormation/CDK                |
 |-------------------|------------------------------------|-----------------------------------|
-| Cloud support     | Multi-cloud (AWS + GCP + Azure...) | Chỉ AWS                           |
-| State management  | Bạn tự quản (S3 + DynamoDB lock)   | AWS quản lý tự động               |
-| Language          | HCL (declarative)                  | YAML/JSON hoặc TypeScript/Python  |
-| Module Registry   | Rất phong phú (community modules)  | Ít hơn (CDK Construct Hub đang lớn) |
-| Drift Detection   | Có (terraform plan)                | Có (drift detection)              |
-| Speed             | Nhanh (parallel resource creation) | Trung bình (tuần tự hơn)          |
+| Cloud support     | Multi-cloud (AWS + GCP + Azure...) | AWS only                          |
+| State management  | You manage (S3 + DynamoDB lock)    | AWS manages automatically         |
+| Language          | HCL (declarative)                  | YAML/JSON or TypeScript/Python    |
+| Module Registry   | Very rich (community modules)      | Fewer (CDK Construct Hub growing) |
+| Drift Detection   | Yes (terraform plan)               | Yes (drift detection)             |
+| Speed             | Fast (parallel resource creation)  | Medium (more sequential)          |
 
-### Terraform Ví dụ (HCL)
+### Terraform Example (HCL)
 
 ```hcl
 resource "aws_s3_bucket" "my_bucket" {
@@ -168,39 +168,39 @@ resource "aws_s3_bucket" "my_bucket" {
 }
 ```
 
-### Khi nào chọn Terraform?
-- Cần multi-cloud hoặc hybrid cloud
-- Team đã quen Terraform
-- Cần community modules phong phú
-- Cần provision cả outside-AWS resources (Datadog, Cloudflare, GitHub...)
+### When to Choose Terraform?
+- Need multi-cloud or hybrid cloud
+- Team already familiar with Terraform
+- Need rich community modules
+- Need to provision resources outside AWS (Datadog, Cloudflare, GitHub...)
 
 ---
 
 ## 5. SSM Parameter Store & AppConfig
 
 ### SSM Parameter Store
-Lưu trữ configuration (string, secret string, StringList) cho app. Phân cấp theo path (`/myapp/prod/DB_HOST`).
+Stores configuration (string, secure string, StringList) for applications. Hierarchical by path (`/myapp/prod/DB_HOST`).
 
-| Tier       | Throughput       | Chi phí    | Dùng khi                    |
+| Tier       | Throughput       | Cost       | When to use                 |
 |------------|------------------|------------|-----------------------------|
-| Standard   | 40 req/s         | Miễn phí   | Config thông thường         |
-| Advanced   | 100 req/s        | $0.05/param/tháng | Config cần throughput cao |
+| Standard   | 40 req/s         | Free       | Regular config              |
+| Advanced   | 100 req/s        | $0.05/param/month | Config needing high throughput |
 
 ### AppConfig
-Tự động deploy configuration thay đổi với validation và rollback. Dùng cho feature flag, dynamic config.
+Automatically deploys configuration changes with validation and rollback. Used for feature flags, dynamic config.
 
 ---
 
-## 6. Tóm tắt chọn công cụ
+## 6. Tool Selection Summary
 
-| Nhu cầu                                                     | Công cụ                        |
+| Need                                                        | Tool                           |
 |-------------------------------------------------------------|--------------------------------|
-| Chỉ dùng AWS, hạ tầng đơn giản, muốn native tích hợp        | **CloudFormation**             |
-| Chỉ dùng AWS, team dev, cần code logic (if/for, OOP)        | **AWS CDK**                    |
-| Multi-cloud (AWS + GCP + Azure), cần module community       | **Terraform**                  |
-| Multi-cloud + muốn dùng TypeScript/Python                    | **Pulumi**                     |
-| Lưu config static (DB host, feature flag URL) miễn phí      | **SSM Parameter Store (Standard)** |
-| Lưu config dynamic + feature flag + validation              | **AppConfig**                  |
-| Lưu secrets (password, API key) + auto rotate               | **Secrets Manager**            |
-| Quản lý container image                                     | **ECR**                        |
-| CI/CD cho hạ tầng                                           | **CDK Pipelines** hoặc **GitHub Actions + Terraform** |
+| AWS-only, simple infrastructure, want native integration     | **CloudFormation**             |
+| AWS-only, dev team, need code logic (if/for, OOP)           | **AWS CDK**                    |
+| Multi-cloud (AWS + GCP + Azure), need community modules     | **Terraform**                  |
+| Multi-cloud + want to use TypeScript/Python                  | **Pulumi**                     |
+| Store static config (DB host, feature flag URL) for free    | **SSM Parameter Store (Standard)** |
+| Store dynamic config + feature flags + validation           | **AppConfig**                  |
+| Store secrets (password, API key) + auto rotate             | **Secrets Manager**            |
+| Manage container images                                     | **ECR**                        |
+| CI/CD for infrastructure                                    | **CDK Pipelines** or **GitHub Actions + Terraform** |
