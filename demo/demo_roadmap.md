@@ -39,9 +39,9 @@ aws sts get-caller-identity
 | 10 | [Observability](10-observability.md) | CloudWatch logs, metrics, alarms, dashboard |
 | 11 | [ElastiCache Redis](11-elasticache-redis.md) | Private Redis cache |
 | 12 | [Amazon Managed Grafana](12-amazon-managed-grafana.md) | Grafana dashboards from CloudWatch |
-| 13 | [CloudFormation](13-cloudformation.md) | AWS-native Infrastructure as Code |
-| 14 | [Terraform](14-terraform.md) | Provider-based Infrastructure as Code |
-| 15 | [Cleanup And Cost Control](15-cleanup-cost-control.md) | Delete resources and stop ongoing costs |
+| 13 | [Cleanup And Cost Control](13-cleanup-cost-control.md) | Delete resources and stop ongoing costs |
+| 14 | [CloudFormation](14-cloudformation.md) | Full Stack with CloudFormation (IaC) |
+| 15 | [Terraform](15-terraform.md) | Full Stack with Terraform (IaC) |
 
 ## Recommended Flow
 
@@ -49,12 +49,12 @@ aws sts get-caller-identity
 2. Build AWS network and data layer with steps 04-05.
 3. Deploy the container through ECR, ECS, and ALB with steps 06-08.
 4. Add production-style operations with steps 09-12.
-5. Practice IaC with steps 13-14.
-6. Run step 15 when the practice session ends.
+5. Run step 13 to clean up manually-created resources.
+6. Practice IaC with steps 14-15 (CloudFormation and Terraform deploy full stack).
 
 ## Resume And Cleanup
 
 - Each numbered lab has its own `Prerequisites`, `Expected result`, `Cleanup`, and `Troubleshooting`.
 - If a dependency was cleaned up, rerun the prerequisite step before continuing.
 - If pausing mid-demo, scale down or delete hourly paid resources first: RDS, Fargate tasks, ALB, ElastiCache, Grafana.
-- When in doubt, finish with [15 - Cleanup And Cost Control](15-cleanup-cost-control.md).
+- When in doubt, finish with [13 - Cleanup And Cost Control](13-cleanup-cost-control.md).
