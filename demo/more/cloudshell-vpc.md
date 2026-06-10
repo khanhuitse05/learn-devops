@@ -1,60 +1,60 @@
 # CloudShell VPC environment
 
-Hướng dẫn này giới thiệu CloudShell VPC environment và dùng database private của bài [05 - RDS PostgreSQL](../05-rds-postgresql.md) làm ví dụ kết nối.
+This guide introduces CloudShell VPC environment and uses the private database from [05 - RDS PostgreSQL](../05-rds-postgresql.md) as a connection example.
 
-## CloudShell VPC environment là gì
+## What is CloudShell VPC environment
 
-CloudShell thông thường là terminal chạy trên trình duyệt và đã được AWS xác thực sẵn. CloudShell VPC environment là một environment CloudShell được đặt trong VPC, subnet và Security Group do bạn chọn.
+Regular CloudShell is a browser-based terminal pre-authenticated by AWS. CloudShell VPC environment is a CloudShell environment placed in a VPC, subnet, and Security Group of your choice.
 
-Environment này phù hợp để debug resource private trong VPC mà không cần bật public access hoặc tạo EC2 test host. Trong ví dụ bên dưới, CloudShell VPC environment được dùng để kết nối RDS PostgreSQL có `PubliclyAccessible=false`.
+This environment is suitable for debugging private resources within a VPC without enabling public access or creating an EC2 test host. In the example below, the CloudShell VPC environment is used to connect to RDS PostgreSQL with `PubliclyAccessible=false`.
 
 ## Prerequisites
 
-Cần có:
+You need:
 
-- RDS PostgreSQL đã có status `Available`.
+- RDS PostgreSQL with status `Available`.
 - VPC `learn-devops-demo-vpc`.
-- Một private subnet của lab.
+- One private subnet from the lab.
 - Security Group `learn-devops-demo-ecs-sg`.
-- RDS Security Group `learn-devops-demo-rds-sg` có inbound rule PostgreSQL port `5432` từ `learn-devops-demo-ecs-sg`.
-- DB instance endpoint, database name, username và password.
-- Nếu đã cleanup RDS, chạy lại [step 05](../05-rds-postgresql.md) trước.
+- RDS Security Group `learn-devops-demo-rds-sg` with inbound rule PostgreSQL port `5432` from `learn-devops-demo-ecs-sg`.
+- DB instance endpoint, database name, username, and password.
+- If RDS was cleaned up, rerun [step 05](../05-rds-postgresql.md) first.
 
-## Tạo CloudShell VPC environment
+## Create CloudShell VPC environment
 
-1. Mở AWS Console và chọn đúng region đang chứa RDS, ví dụ Singapore là `ap-southeast-1`.
-2. Mở `CloudShell`.
-3. Nhấn dấu `+` → `Create VPC environment`.
-4. Điền:
+1. Open AWS Console and select the correct region containing RDS, e.g., Singapore is `ap-southeast-1`.
+2. Open `CloudShell`.
+3. Click the `+` sign → `Create VPC environment`.
+4. Fill in:
 
-| Field | Giá trị cần chọn hoặc nhập |
+| Field | Value to select or enter |
 | --- | --- |
 | `Name` | `learn-devops-demo-shell` |
 | `VPC` | `learn-devops-demo-vpc` |
-| `Subnet` | Chọn một private subnet của lab |
+| `Subnet` | Select a private subnet from the lab |
 | `Security group` | `learn-devops-demo-ecs-sg` |
 
-5. Nhấn `Create`.
+5. Click `Create`.
 
-Chọn `learn-devops-demo-ecs-sg` vì RDS SG của lab chỉ cho phép kết nối port `5432` từ SG này.
+Select `learn-devops-demo-ecs-sg` because the lab's RDS SG only allows port `5432` connections from this SG.
 
-## Ví dụ: kết nối RDS PostgreSQL private
+## Example: connect to private RDS PostgreSQL
 
-### Kiểm tra psql
+### Check psql
 
-Trong CloudShell VPC environment, chạy:
+In the CloudShell VPC environment, run:
 
 ```bash
 psql --version
 ```
 
-Nếu đã có `psql`, tiếp tục phần bên dưới.
+If `psql` is already available, continue to the section below.
 
-Lab tối giản không tạo NAT Gateway, nên CloudShell VPC environment không có Internet outbound để cài package hoặc tải file từ Internet. Nếu `psql` chưa có sẵn, dùng ECS task, EC2 test host có cấu hình phù hợp hoặc cân nhắc tạo NAT Gateway tạm thời rồi xóa ngay sau khi test để tránh phí.
+The minimal lab does not create a NAT Gateway, so the CloudShell VPC environment has no outbound internet to install packages or download files from the internet. If `psql` is not yet available, use an ECS task, EC2 test host with suitable configuration, or consider creating a temporary NAT Gateway and deleting it immediately after testing to avoid charges.
 
-### Kết nối RDS PostgreSQL
+### Connect to RDS PostgreSQL
 
-Đặt biến theo database đã tạo. Không lưu password vào Git:
+Set variables according to the created database. Do not save the password to Git:
 
 ```bash
 RDS_ENDPOINT=YOUR_RDS_ENDPOINT
@@ -68,53 +68,53 @@ Test DNS:
 nslookup "$RDS_ENDPOINT"
 ```
 
-Kết nối PostgreSQL:
+Connect to PostgreSQL:
 
 ```bash
 psql "host=$RDS_ENDPOINT port=5432 dbname=$DB_NAME user=$DB_USERNAME sslmode=require"
 ```
 
-Nhập password khi `psql` yêu cầu. Không đặt password trực tiếp trong lệnh để tránh lưu secret vào shell history.
+Enter the password when `psql` prompts. Do not put the password directly in the command to avoid saving the secret in shell history.
 
-Trong PostgreSQL prompt, chạy:
+In the PostgreSQL prompt, run:
 
 ```sql
 select now();
 ```
 
-Thoát:
+Exit:
 
 ```sql
 \q
 ```
 
-### Xác minh TLS đầy đủ nếu đã có CA bundle
+### Full TLS verification if you already have a CA bundle
 
-RDS Console có thể sinh lệnh mẫu dùng `sslmode=verify-full`. Chế độ này mã hóa kết nối, xác minh certificate và hostname.
+The RDS Console can generate a sample command using `sslmode=verify-full`. This mode encrypts the connection, verifies the certificate, and verifies the hostname.
 
-Nếu CloudShell VPC environment đã có file `global-bundle.pem`, chạy:
+If the CloudShell VPC environment already has the `global-bundle.pem` file, run:
 
 ```bash
 psql "host=$RDS_ENDPOINT port=5432 dbname=$DB_NAME user=$DB_USERNAME sslmode=verify-full sslrootcert=./global-bundle.pem"
 ```
 
-Không chạy `curl` tải CA bundle trong private subnet của lab nếu chưa có NAT Gateway hoặc đường Internet outbound phù hợp.
+Do not run `curl` to download the CA bundle in the lab's private subnet if you don't have a NAT Gateway or suitable outbound internet path.
 
 ## Troubleshooting
 
-- `could not translate host name ... to address`: xác nhận endpoint được copy trực tiếp từ RDS Console và RDS đã có status `Available`.
-- Timeout khi connect: xác nhận CloudShell VPC environment dùng `learn-devops-demo-ecs-sg` và RDS SG cho phép inbound port `5432` từ SG đó.
-- `password authentication failed`: kiểm tra username, password và database name.
-- `psql: command not found`: CloudShell VPC environment hiện tại chưa có PostgreSQL client. Không tạo NAT Gateway chỉ để test nếu không cần thiết.
+- `could not translate host name ... to address`: confirm the endpoint is copied directly from the RDS Console and RDS has status `Available`.
+- Timeout when connecting: confirm the CloudShell VPC environment uses `learn-devops-demo-ecs-sg` and RDS SG allows inbound port `5432` from that SG.
+- `password authentication failed`: check username, password, and database name.
+- `psql: command not found`: the current CloudShell VPC environment does not have a PostgreSQL client. Do not create a NAT Gateway just for testing if not necessary.
 
 ## Cleanup
 
-Sau khi test, xóa CloudShell VPC environment nếu không còn dùng:
+After testing, delete the CloudShell VPC environment if no longer in use:
 
-1. Mở menu của CloudShell VPC environment.
-2. Chọn `Delete`.
-3. Xác nhận xóa environment.
+1. Open the menu of the CloudShell VPC environment.
+2. Select `Delete`.
+3. Confirm environment deletion.
 
-CloudShell không tính thêm phí, nhưng nên xóa environment tạm để workspace gọn và tránh nhầm lẫn.
+CloudShell does not charge extra, but you should delete the temporary environment to keep the workspace tidy and avoid confusion.
 
-Tham khảo tài liệu AWS: [Connect to Private Amazon RDS PostgreSQL Database Using AWS CloudShell](https://docs.aws.amazon.com/hands-on/latest/connect-to-private-amazon-rds-for-postgresql-from-aws-cloudshell/connect-to-private-amazon-rds-postgresql-database-using-aws-cloudshell.html).
+Reference AWS documentation: [Connect to Private Amazon RDS PostgreSQL Database Using AWS CloudShell](https://docs.aws.amazon.com/hands-on/latest/connect-to-private-amazon-rds-for-postgresql-from-aws-cloudshell/connect-to-private-amazon-rds-postgresql-database-using-aws-cloudshell.html).

@@ -1,17 +1,17 @@
 # AWS Demo Roadmap
 
-Quick review cho trainer trước khi bắt đầu buổi training. Repo này đi từ app
-Node.js local trong `server/` đến backend chạy trên AWS ECS/Fargate, public qua
-ALB, kết nối RDS/PostgreSQL, thêm secrets, observability, Redis, Grafana,
-Infrastructure as Code và cleanup.
+Quick review for the trainer before starting the training session. This repo goes from a
+local Node.js app in `server/` to a backend running on AWS ECS/Fargate, publicly exposed via
+ALB, connected to RDS/PostgreSQL, with secrets, observability, Redis, Grafana,
+Infrastructure as Code, and cleanup.
 
 ## Demo Rules
 
-- Region mặc định: `ap-southeast-1`.
+- Default region: `ap-southeast-1`.
 - Resource prefix: `learn-devops-demo-*`.
-- Không public RDS/Redis ra internet.
-- Không sửa source code server trong các lab AWS; chỉ đổi infrastructure, env vars và secrets.
-- Mọi service có khả năng tốn tiền phải có cleanup.
+- Do not expose RDS/Redis to the internet.
+- Do not modify the server source code in AWS labs; only change infrastructure, env vars, and secrets.
+- Every service that can incur costs must have cleanup.
 
 ## Quick Setup
 

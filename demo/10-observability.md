@@ -1,52 +1,52 @@
 # 10 - Observability
 
-## Mục tiêu
+## Objective
 
-Theo dõi app bằng CloudWatch Logs, metrics, alarm và dashboard cơ bản để biết service có chạy ổn không.
+Monitor the app using CloudWatch Logs, metrics, alarms, and a basic dashboard to know whether the service is running well.
 
 ## Prerequisites
 
-- Đã hoàn thành [step 07](07-ecs-fargate-service.md): ECS service còn tồn tại và task đang chạy để tạo logs và metrics.
-- Nên giữ ALB từ [step 08](08-alb-public-entry.md) để tạo request test và xem ALB metrics.
-- Nếu muốn test endpoint database, đã hoàn thành [step 09](09-secrets-and-env.md).
-- Nếu đã cleanup ECS service hoặc ALB: chạy lại step tương ứng trước khi quan sát metrics.
+- Completed [step 07](07-ecs-fargate-service.md): ECS service still exists and task is running to generate logs and metrics.
+- Should keep ALB from [step 08](08-alb-public-entry.md) to create test requests and view ALB metrics.
+- If you want to test database endpoints, completed [step 09](09-secrets-and-env.md).
+- If ECS service or ALB was cleaned up: rerun the corresponding step before observing metrics.
 
-## Kiến thức cần hiểu
+## Knowledge to understand
 
-- Container nên log ra stdout/stderr.
-- ECS awslogs driver gửi log vào CloudWatch Logs.
-- ALB có metric target response, 4xx, 5xx.
-- `/test-error` tạo HTTP 500 an toàn để demo error log, ALB 5xx metric và alarm mà không restart task.
-- CloudWatch Dashboard gom metric quan trọng vào một màn hình.
-- Alarm giúp cảnh báo khi service unhealthy hoặc error tăng.
+- Containers should log to stdout/stderr.
+- ECS awslogs driver sends logs to CloudWatch Logs.
+- ALB has target response, 4xx, and 5xx metrics.
+- `/test-error` generates a safe HTTP 500 to demo error logs, ALB 5xx metrics, and alarms without restarting the task.
+- CloudWatch Dashboard gathers important metrics on one screen.
+- Alarm helps alert when the service is unhealthy or errors increase.
 
-## Chi phí ước lượng
+## Estimated cost
 
-- CloudWatch Logs tính phí ingest và storage.
-- CloudWatch Alarms có phí theo alarm.
-- Với lab nhỏ, chi phí thường thấp nhưng vẫn nên xóa log group/alarm sau demo.
+- CloudWatch Logs charges for ingest and storage.
+- CloudWatch Alarms have a per-alarm charge.
+- For a small lab, costs are usually low but still delete log groups/alarms after the demo.
 
-## Cảnh báo service tốn tiền
+## Cost warning for paid services
 
-Log group để lâu có thể tích lũy storage. Đặt retention ngắn, ví dụ 1-3 ngày cho lab.
+Log groups left long can accumulate storage. Set a short retention, e.g., 1-3 days for the lab.
 
-## Các bước làm bằng Console
+## Console steps
 
-1. Vào CloudWatch Logs.
-2. Mở log group `/ecs/learn-devops-demo-node`.
-3. Xem log stream của task đang chạy.
-4. Set retention 1 hoặc 3 ngày.
-5. Vào CloudWatch Metrics.
-6. Xem ECS service metrics: CPU, memory.
-7. Xem ALB target group metrics: healthy host count, HTTP 5xx.
-8. Tạo dashboard `learn-devops-demo-dashboard` với CPU, memory, healthy host count và ALB 5xx.
-9. Tạo alarm đơn giản:
+1. Go to CloudWatch Logs.
+2. Open the log group `/ecs/learn-devops-demo-node`.
+3. View the log stream of the running task.
+4. Set retention to 1 or 3 days.
+5. Go to CloudWatch Metrics.
+6. View ECS service metrics: CPU, memory.
+7. View ALB target group metrics: healthy host count, HTTP 5xx.
+8. Create a dashboard `learn-devops-demo-dashboard` with CPU, memory, healthy host count, and ALB 5xx.
+9. Create a simple alarm:
    - ECS running task count < 1.
-   - Hoặc ALB target 5xx > 0 trong vài phút.
+   - Or ALB target 5xx > 0 within a few minutes.
 
-## Lệnh CLI kiểm tra/debug
+## CLI check/debug commands
 
-Xem logs gần đây:
+View recent logs:
 
 ```bash
 aws logs tail /ecs/learn-devops-demo-node --since 30m
@@ -60,7 +60,7 @@ aws logs put-retention-policy \
   --retention-in-days 3
 ```
 
-Liệt kê alarms:
+List alarms:
 
 ```bash
 aws cloudwatch describe-alarms \
@@ -69,14 +69,14 @@ aws cloudwatch describe-alarms \
   --output table
 ```
 
-Liệt kê dashboards:
+List dashboards:
 
 ```bash
 aws cloudwatch list-dashboards \
   --dashboard-name-prefix learn-devops-demo
 ```
 
-Test app log qua ALB:
+Test app logs via ALB:
 
 ```bash
 curl -i "http://$ALB_DNS/health"
@@ -85,37 +85,37 @@ curl -i "http://$ALB_DNS/test-error"
 curl -i "http://$ALB_DNS/health"
 ```
 
-Sau `/test-error`, `/health` vẫn phải trả HTTP `200`. Như vậy bạn có 5xx data để xem logs/metrics nhưng không làm ECS task crash.
+After `/test-error`, `/health` must still return HTTP `200`. This way you have 5xx data to view logs/metrics without crashing the ECS task.
 
 ## Expected result
 
-- CloudWatch Logs có request logs từ app.
-- `/test-error` tạo error log và HTTP 500 data để kiểm tra ALB 5xx metric/alarm.
-- Log retention không để mặc định `Never expire`.
-- Có dashboard demo hoặc biết cách tạo dashboard từ metric.
-- Có ít nhất một alarm demo hoặc biết cách tạo alarm từ metric.
+- CloudWatch Logs has request logs from the app.
+- `/test-error` generates error logs and HTTP 500 data to check ALB 5xx metrics/alarms.
+- Log retention is not left at the default `Never expire`.
+- Have a demo dashboard or know how to create a dashboard from metrics.
+- Have at least one demo alarm or know how to create an alarm from metrics.
 
 ## Cleanup
 
-- Nếu đang kiểm tra alarm và logs: giữ resource cho đến khi test xong.
-- Nếu học tiếp: chuyển sang [step 11](11-elasticache-redis.md) để thêm cache Redis private.
-- Nếu đã hoàn thành demo: chuyển sang [step 15](15-cleanup-cost-control.md) để cleanup toàn bộ resource theo thứ tự.
+- If still testing alarms and logs: keep resources until testing is complete.
+- If continuing: move to [step 11](11-elasticache-redis.md) to add a private Redis cache.
+- If demo is complete: move to [step 15](15-cleanup-cost-control.md) to fully clean up resources in order.
 
-Xóa alarm demo:
+Delete demo alarm:
 
 ```bash
 aws cloudwatch delete-alarms \
   --alarm-names learn-devops-demo-ecs-running-task-low
 ```
 
-Xóa log group sau khi xóa ECS service:
+Delete log group after deleting ECS service:
 
 ```bash
 aws logs delete-log-group \
   --log-group-name /ecs/learn-devops-demo-node
 ```
 
-Xóa dashboard demo:
+Delete demo dashboard:
 
 ```bash
 aws cloudwatch delete-dashboards \
@@ -124,6 +124,6 @@ aws cloudwatch delete-dashboards \
 
 ## Troubleshooting
 
-- Không thấy logs: kiểm tra task definition log configuration và execution role.
-- Logs quá nhiều: giảm request test, set retention ngắn.
-- Alarm không đổi state ngay: CloudWatch cần vài datapoint tùy period/evaluation.
+- No logs visible: check task definition log configuration and execution role.
+- Too many logs: reduce test requests, set short retention.
+- Alarm not changing state immediately: CloudWatch needs a few datapoints depending on period/evaluation.

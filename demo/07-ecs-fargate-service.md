@@ -1,136 +1,136 @@
 # 07 - ECS Fargate Service
 
-## Mục tiêu
+## Objective
 
-Deploy image server hoàn chỉnh lên ECS/Fargate. Ban đầu chạy app health độc lập với DB, sau đó gắn ALB và inject RDS secret ở các step tiếp theo.
+Deploy the complete server image to ECS/Fargate. Initially run app health independently of the DB, then attach ALB and inject RDS secret in later steps.
 
 ## Prerequisites
 
-- Đã hoàn thành [step 04](04-vpc-network.md): VPC, subnet và `learn-devops-demo-ecs-sg` vẫn tồn tại.
-- Đã hoàn thành [step 06](06-ecr-image-registry.md): ECR repository còn image tag `demo-001`.
-- Có ECS task execution role cho phép pull image từ ECR và ghi CloudWatch Logs. Nếu chưa có, ECS Console có thể tạo default role trong lúc tạo task definition.
-- Account có ECS service-linked role `AWSServiceRoleForECS`, hoặc IAM user/role hiện tại có quyền `iam:CreateServiceLinkedRole` để ECS tự tạo role này.
-- Nếu đã cleanup network: chạy lại [step 04](04-vpc-network.md).
-- Nếu đã cleanup ECR repository: chạy lại [step 06](06-ecr-image-registry.md).
+- Completed [step 04](04-vpc-network.md): VPC, subnets, and `learn-devops-demo-ecs-sg` still exist.
+- Completed [step 06](06-ecr-image-registry.md): ECR repository still has image tag `demo-001`.
+- Have an ECS task execution role that allows pulling images from ECR and writing to CloudWatch Logs. If not yet available, the ECS Console can create a default role during task definition creation.
+- Account has ECS service-linked role `AWSServiceRoleForECS`, or the current IAM user/role has `iam:CreateServiceLinkedRole` permission so ECS can auto-create this role.
+- If network was cleaned up: rerun [step 04](04-vpc-network.md).
+- If ECR repository was cleaned up: rerun [step 06](06-ecr-image-registry.md).
 
-## Kiến thức cần hiểu
+## Knowledge to understand
 
-- ECS cluster là nơi quản lý task/service.
-- Task definition mô tả container, CPU, memory, env, log config.
-- Fargate tính phí theo vCPU, memory và thời gian task chạy.
-- Execution role dùng để pull image và ghi log; task role dùng cho app gọi AWS service.
-- Image đã hỗ trợ PostgreSQL. Không thêm code server trong bước ECS.
+- ECS cluster is where tasks/services are managed.
+- Task definition describes container, CPU, memory, env, log config.
+- Fargate charges by vCPU, memory, and task running time.
+- Execution role is used to pull images and write logs; task role is used for the app to call AWS services.
+- The image already supports PostgreSQL. No server code added in the ECS step.
 
-## Chi phí ước lượng
+## Estimated cost
 
-- Fargate task tính phí khi chạy.
-- Chọn CPU/memory nhỏ nhất cho lab, ví dụ `0.25 vCPU` và `0.5 GB`.
-- Desired count nên để `1`.
+- Fargate task charges when running.
+- Select the smallest CPU/memory for the lab, e.g., `0.25 vCPU` and `0.5 GB`.
+- Desired count should be `1`.
 
-## Cảnh báo service tốn tiền
+## Cost warning for paid services
 
-ECS service sẽ tự giữ task chạy liên tục theo desired count. Sau lab hãy set desired count về 0 hoặc delete service.
+ECS service will automatically keep tasks running continuously based on desired count. After the lab, set desired count to 0 or delete the service.
 
-## Các bước làm bằng Console
+## Console steps
 
-Trước khi tạo cluster, kiểm tra ECS service-linked role:
+Before creating a cluster, check the ECS service-linked role:
 
-1. Vào **IAM Console** -> **Roles**.
-2. Tìm role `AWSServiceRoleForECS`.
-3. Nếu role đã tồn tại, tiếp tục tạo cluster.
-4. Nếu chưa có role, tạo bằng một trong hai cách:
-   - Cách Console: **Create role** -> chọn **AWS service** -> chọn use case cho **Elastic Container Service** nếu Console hiển thị lựa chọn service-linked role.
-   - Cách nhanh hơn: mở **CloudShell** và chạy lệnh ở phần CLI bên dưới để tạo `AWSServiceRoleForECS`.
-5. Nếu không tạo được role, IAM user/role hiện tại thiếu quyền `iam:CreateServiceLinkedRole`; cần dùng admin role hoặc nhờ admin tạo giúp một lần cho account.
+1. Go to **IAM Console** -> **Roles**.
+2. Find the role `AWSServiceRoleForECS`.
+3. If the role already exists, continue creating the cluster.
+4. If the role does not exist, create it in one of two ways:
+   - Console method: **Create role** -> select **AWS service** -> select the use case for **Elastic Container Service** if the Console shows the service-linked role option.
+   - Faster method: open **CloudShell** and run the CLI command below to create `AWSServiceRoleForECS`.
+5. If you cannot create the role, the current IAM user/role lacks `iam:CreateServiceLinkedRole` permission; use an admin role or ask an admin to create it once for the account.
 
-Tạo cluster:
+Create cluster:
 
-1. Vào **ECS Console** ở đúng region đang dùng cho lab, ví dụ `ap-southeast-1`.
-2. Trong menu trái, chọn **Clusters** -> **Create cluster**.
-3. Ở **Cluster configuration**:
+1. Go to **ECS Console** in the correct region used for the lab, e.g., `ap-southeast-1`.
+2. In the left menu, select **Clusters** -> **Create cluster**.
+3. Under **Cluster configuration**:
    - Cluster name: `learn-devops-demo-cluster`.
-   - **Service Connect defaults - optional**: để trống.
-4. Ở **Infrastructure - advanced**:
-   - Chọn **Fargate only**.
-   - Không chọn thêm Amazon EC2 instances.
-5. Ở **Monitoring - optional**:
-   - **Container Insights**: chọn **Turned off** để tiết kiệm chi phí cho lab.
-   - **ECS Exec encryption and logging**: giữ **Default**.
-   - **KMS Key ID for ECS Exec session**: để trống.
-6. Ở **Encryption - optional**:
-   - **Managed storage**: để trống, dùng AWS managed key mặc định.
-   - **Fargate ephemeral storage**: để trống, dùng AWS managed key mặc định.
-7. Ở **Tags - optional**: không cần thêm tag cho lab này.
-8. Chọn **Create**.
+   - **Service Connect defaults - optional**: leave empty.
+4. Under **Infrastructure - advanced**:
+   - Select **Fargate only**.
+   - Do not select additional Amazon EC2 instances.
+5. Under **Monitoring - optional**:
+   - **Container Insights**: select **Turned off** to save costs for the lab.
+   - **ECS Exec encryption and logging**: keep **Default**.
+   - **KMS Key ID for ECS Exec session**: leave empty.
+6. Under **Encryption - optional**:
+   - **Managed storage**: leave empty, use the default AWS managed key.
+   - **Fargate ephemeral storage**: leave empty, use the default AWS managed key.
+7. Under **Tags - optional**: no need to add tags for this lab.
+8. Select **Create**.
 
-Sau khi cluster tạo xong, tạo task definition:
+After the cluster is created, create a task definition:
 
-1. Trong ECS Console, chọn **Task definitions** -> **Create new task definition**.
-2. Ở **Task definition configuration**:
+1. In ECS Console, select **Task definitions** -> **Create new task definition**.
+2. Under **Task definition configuration**:
    - Task definition family: `learn-devops-demo-node`.
-3. Ở **Infrastructure requirements**:
+3. Under **Infrastructure requirements**:
    - Launch type: **AWS Fargate**.
    - Operating system: **Linux**.
-   - CPU architecture: chọn kiến trúc khớp với image đã build ở step 06, thường là **X86_64**. Nếu bạn build image ARM64 thì chọn **ARM64**.
+   - CPU architecture: select the architecture matching the image built in step 06, usually **X86_64**. If you built an ARM64 image, select **ARM64**.
    - CPU: `0.25 vCPU`.
    - Memory: `0.5 GB`.
-   - Task role: để trống ở bước này.
-   - Task execution role: nếu dropdown có **Create default role** thì chọn mục này. ECS sẽ tạo execution role mặc định có policy `AmazonECSTaskExecutionRolePolicy`. Nếu account đã có role như `ecsTaskExecutionRole`, chọn role đó. Không chọn **None**.
-4. Ở **Container - 1**:
+   - Task role: leave empty at this step.
+   - Task execution role: if the dropdown has **Create default role**, select it. ECS will create a default execution role with the `AmazonECSTaskExecutionRolePolicy` policy. If the account already has a role like `ecsTaskExecutionRole`, select that role. Do not select **None**.
+4. Under **Container - 1**:
    - Name: `app`.
-   - Image URI: ECR image từ step 06, dùng tag cụ thể như `demo-001`.
-   - Essential container: bật.
+   - Image URI: ECR image from step 06, use a specific tag like `demo-001`.
+   - Essential container: enable.
    - Container port: `3000`.
    - Protocol: `TCP`.
-   - Port name: có thể nhập `app-3000-tcp` hoặc để Console tự tạo.
-5. Ở **Environment variables**:
+   - Port name: can enter `app-3000-tcp` or let the Console auto-generate.
+5. Under **Environment variables**:
    - `PORT=3000`
    - `HOST=0.0.0.0`
-6. Ở **Log collection**:
-   - Bật **Use log collection** nếu chưa bật.
+6. Under **Log collection**:
+   - Enable **Use log collection** if not already enabled.
    - Destination: **Amazon CloudWatch**.
-   - Giữ **Value type** là **Value** cho tất cả dòng.
+   - Keep **Value type** as **Value** for all rows.
    - `awslogs-group`: `/ecs/learn-devops-demo-node`
-   - `awslogs-region`: region đang dùng cho lab, ví dụ `ap-southeast-1`.
+   - `awslogs-region`: region used for the lab, e.g., `ap-southeast-1`.
    - `awslogs-stream-prefix`: `ecs`
-   - Nếu Console có dòng `awslogs-create-group`, đặt value là `true` để ECS tự tạo log group khi role có quyền.
-7. Chọn **Create**.
+   - If the Console has `awslogs-create-group` row, set value to `true` so ECS auto-creates the log group when the role has permission.
+7. Select **Create**.
 
-Tạo ECS service để chạy task liên tục:
+Create an ECS service to run the task continuously:
 
-1. Vào **Clusters** -> chọn `learn-devops-demo-cluster`.
-2. Trong tab **Services**, chọn **Create**.
-3. Ở **Environment**:
+1. Go to **Clusters** -> select `learn-devops-demo-cluster`.
+2. In the **Services** tab, select **Create**.
+3. Under **Environment**:
    - Compute options: **Launch type**.
    - Launch type: **Fargate**.
    - Platform version: **Latest**.
-4. Ở **Deployment configuration**:
+4. Under **Deployment configuration**:
    - Application type: **Service**.
    - Task definition family: `learn-devops-demo-node`.
-   - Revision: chọn revision mới nhất.
+   - Revision: select the latest revision.
    - Service name: `learn-devops-demo-node-service`.
    - Service type: **Replica**.
    - Desired tasks: `1`.
-5. Ở **Networking**:
+5. Under **Networking**:
    - VPC: `learn-devops-demo-vpc`.
-   - Subnets: với lab ngắn, chỉ giữ 2 public subnets:
+   - Subnets: for a short lab, only keep 2 public subnets:
      - `learn-devops-demo-vpc-subnet-public1-ap-southeast-1a`
      - `learn-devops-demo-vpc-subnet-public2-ap-southeast-1b`
-   - Bỏ chọn 2 private subnets:
+   - Uncheck 2 private subnets:
      - `learn-devops-demo-vpc-subnet-private1-ap-southeast-1a`
      - `learn-devops-demo-vpc-subnet-private2-ap-southeast-1b`
-   - Bật **Public IP** để task pull image/logs được nếu chưa có NAT gateway hoặc VPC endpoints.
-   - Nếu đã có NAT gateway hoặc VPC endpoints phù hợp, có thể chọn private subnets và tắt **Public IP**.
-   - Security group: chọn **Existing security group** -> `learn-devops-demo-ecs-sg`.
-6. Ở **Load balancing**: chọn **None**. Step 08 sẽ tạo ALB và attach target group sau.
-7. Giữ các mục còn lại mặc định, chọn **Create**.
-8. Chờ service chuyển sang trạng thái có **Desired tasks = 1** và **Running tasks = 1**.
+   - Enable **Public IP** so the task can pull images/logs if no NAT gateway or VPC endpoints exist.
+   - If NAT gateway or suitable VPC endpoints already exist, you can select private subnets and disable **Public IP**.
+   - Security group: select **Existing security group** -> `learn-devops-demo-ecs-sg`.
+6. Under **Load balancing**: select **None**. Step 08 will create ALB and attach target group later.
+7. Keep remaining items as default, select **Create**.
+8. Wait for the service to reach **Desired tasks = 1** and **Running tasks = 1**.
 
-Chưa inject `DATABASE_URL` dạng plain text trong bước này. `/health` vẫn hoạt động; các endpoint DB sẽ kết nối RDS sau khi cấu hình secret ở step 09.
+Do not inject `DATABASE_URL` in plain text at this step. `/health` still works; DB endpoints will connect to RDS after configuring secrets in step 09.
 
-## Lệnh CLI kiểm tra/debug
+## CLI check/debug commands
 
-Kiểm tra cluster:
+Check cluster:
 
 ```bash
 aws ecs describe-clusters \
@@ -139,7 +139,7 @@ aws ecs describe-clusters \
   --output table
 ```
 
-Kiểm tra ECS service-linked role:
+Check ECS service-linked role:
 
 ```bash
 aws iam get-role \
@@ -148,14 +148,14 @@ aws iam get-role \
   --output text
 ```
 
-Tạo ECS service-linked role nếu account chưa có:
+Create ECS service-linked role if the account does not have one:
 
 ```bash
 aws iam create-service-linked-role \
   --aws-service-name ecs.amazonaws.com
 ```
 
-Xem service:
+View service:
 
 ```bash
 aws ecs describe-services \
@@ -165,7 +165,7 @@ aws ecs describe-services \
   --output table
 ```
 
-Xem stopped reason nếu task lỗi:
+View stopped reason if task errors:
 
 ```bash
 aws ecs list-tasks \
@@ -179,7 +179,7 @@ aws ecs list-tasks \
 aws logs tail /ecs/learn-devops-demo-node --since 30m
 ```
 
-Nếu ECS Console báo CloudFormation stack `UPDATE_FAILED` hoặc resource `ECSService` `CREATE_FAILED`, xem lỗi gốc:
+If ECS Console reports CloudFormation stack `UPDATE_FAILED` or `ECSService` resource `CREATE_FAILED`, view the root error:
 
 ```bash
 aws cloudformation describe-stack-events \
@@ -192,16 +192,16 @@ aws cloudformation describe-stack-events \
 
 - ECS cluster active.
 - Service desired count 1, running count 1.
-- CloudWatch Logs có dòng `server started`.
-- Không cần sửa hoặc rebuild server image.
+- CloudWatch Logs has `server started` line.
+- No need to modify or rebuild the server image.
 
 ## Cleanup
 
-- Nếu học tiếp ngay step 08: giữ ECS service với desired count `1`. Step 08 cần task đang chạy để attach vào target group của ALB.
-- Nếu tạm dừng nhưng sẽ học tiếp: scale desired count về `0` để ngừng phí Fargate. Trước khi học tiếp step 08, scale lại về `1`.
-- Nếu dừng lab: xóa ECS service. Step 15 sẽ cleanup các resource còn lại.
+- If continuing immediately to step 08: keep ECS service with desired count `1`. Step 08 needs the running task to attach to the ALB target group.
+- If pausing but will continue: scale desired count to `0` to stop Fargate charges. Before continuing step 08, scale back to `1`.
+- If ending the lab: delete ECS service. Step 15 will clean up remaining resources.
 
-Scale về `0` khi tạm dừng:
+Scale to `0` when pausing:
 
 ```bash
 aws ecs update-service \
@@ -210,7 +210,7 @@ aws ecs update-service \
   --desired-count 0
 ```
 
-Xóa service khi dừng lab:
+Delete service when ending the lab:
 
 ```bash
 aws ecs delete-service \
@@ -221,10 +221,10 @@ aws ecs delete-service \
 
 ## Troubleshooting
 
-- Create cluster báo `Unable to assume the service linked role`: kiểm tra role `AWSServiceRoleForECS`. Nếu chưa có, tạo bằng `aws iam create-service-linked-role --aws-service-name ecs.amazonaws.com`. Nếu lệnh bị `AccessDenied`, IAM user/role hiện tại thiếu quyền `iam:CreateServiceLinkedRole`.
-- ECS Console mở CloudFormation và báo `ECSService` `CREATE_FAILED`: đây chưa phải lỗi gốc. Vào tab **Events**, mở dòng `ECSService`, xem **Status reason**. Các nguyên nhân hay gặp: chưa bật **Public IP** khi dùng public subnet, còn chọn nhầm private subnet nhưng không có NAT/VPC endpoints, task execution role thiếu quyền ECR/CloudWatch Logs, hoặc log group chưa tồn tại mà role không có quyền tạo log group.
-- Task dừng ngay: xem ECS stopped reason và CloudWatch logs.
-- Pull image lỗi: kiểm tra ECR URI và execution role.
-- Không có logs: kiểm tra task execution role và log group.
-- App không listen: image phải dùng `HOST=0.0.0.0` và `PORT=3000`.
-- `/api/db/health` trả HTTP 503 trước step 09: đây là kết quả mong đợi vì task chưa nhận `DATABASE_URL`.
+- Create cluster reports `Unable to assume the service linked role`: check role `AWSServiceRoleForECS`. If not present, create with `aws iam create-service-linked-role --aws-service-name ecs.amazonaws.com`. If the command returns `AccessDenied`, the current IAM user/role lacks `iam:CreateServiceLinkedRole`.
+- ECS Console opens CloudFormation and reports `ECSService` `CREATE_FAILED`: this is not yet the root error. Go to the **Events** tab, open the `ECSService` row, view **Status reason**. Common causes: **Public IP** not enabled when using public subnets, mistakenly selecting private subnets without NAT/VPC endpoints, task execution role lacking ECR/CloudWatch Logs permissions, or log group doesn't exist and role lacks permission to create it.
+- Task stops immediately: view ECS stopped reason and CloudWatch logs.
+- Pull image error: check ECR URI and execution role.
+- No logs: check task execution role and log group.
+- App not listening: image must use `HOST=0.0.0.0` and `PORT=3000`.
+- `/api/db/health` returns HTTP 503 before step 09: this is expected because the task hasn't received `DATABASE_URL` yet.

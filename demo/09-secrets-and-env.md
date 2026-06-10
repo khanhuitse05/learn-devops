@@ -1,60 +1,60 @@
 # 09 - Secrets And Environment Variables
 
-## Mục tiêu
+## Objective
 
-Inject RDS connection string vào server image có sẵn mà không sửa code hoặc rebuild image. Ưu tiên SSM Parameter Store; dùng Secrets Manager khi muốn quản lý secret đúng nghĩa hơn.
+Inject the RDS connection string into the existing server image without modifying code or rebuilding the image. Prefer SSM Parameter Store; use Secrets Manager when you want more proper secret management.
 
 ## Prerequisites
 
-- Đã hoàn thành [step 05](05-rds-postgresql.md): RDS vẫn tồn tại và có endpoint.
-- Đã hoàn thành [step 07](07-ecs-fargate-service.md): ECS service và task definition vẫn tồn tại.
-- Nên giữ ALB từ [step 08](08-alb-public-entry.md) để test API từ bên ngoài.
-- ECS task execution role có thể được cập nhật quyền đọc SSM parameter hoặc Secrets Manager secret.
-- Nếu đã cleanup RDS: chạy lại [step 05](05-rds-postgresql.md). Nếu đã cleanup ECS service: chạy lại [step 07](07-ecs-fargate-service.md).
+- Completed [step 05](05-rds-postgresql.md): RDS still exists and has an endpoint.
+- Completed [step 07](07-ecs-fargate-service.md): ECS service and task definition still exist.
+- Should keep ALB from [step 08](08-alb-public-entry.md) to test the API externally.
+- ECS task execution role can be updated with permission to read SSM parameters or Secrets Manager secrets.
+- If RDS was cleaned up: rerun [step 05](05-rds-postgresql.md). If ECS service was cleaned up: rerun [step 07](07-ecs-fargate-service.md).
 
-## Kiến thức cần hiểu
+## Knowledge to understand
 
-- Env var thường hiện trong task definition revision, không nên chứa password plain text.
-- SSM Parameter Store `String` dễ làm theo lab nhưng lưu value dạng unencrypted; `SecureString` an toàn hơn nếu muốn mã hóa bằng KMS.
-- Secrets Manager có tính năng secret lifecycle/rotation tốt hơn nhưng tính phí theo secret.
-- ECS task execution role cần quyền đọc secret/parameter.
-- App đã đọc `DATABASE_URL`; bước này chỉ cấu hình runtime.
+- Env vars are usually visible in task definition revisions, should not contain plain text passwords.
+- SSM Parameter Store `String` is easy for labs but stores the value unencrypted; `SecureString` is safer if you want encryption via KMS.
+- Secrets Manager has better secret lifecycle/rotation features but charges per secret.
+- ECS task execution role needs permission to read the secret/parameter.
+- The app already reads `DATABASE_URL`; this step only configures runtime.
 
-## Chi phí ước lượng
+## Estimated cost
 
-- SSM Parameter Store standard parameter thường là lựa chọn tiết kiệm.
-- Secrets Manager tính phí theo secret/tháng và API calls.
+- SSM Parameter Store standard parameters are usually the cost-effective choice.
+- Secrets Manager charges per secret/month and API calls.
 
-## Cảnh báo service tốn tiền
+## Cost warning for paid services
 
-Secrets Manager có phí định kỳ theo secret. Với lab tiết kiệm, dùng SSM Parameter Store nếu không cần rotation.
+Secrets Manager has a recurring fee per secret. For a cost-saving lab, use SSM Parameter Store if rotation is not needed.
 
-## Các bước làm bằng Console
+## Console steps
 
-Phương án tiết kiệm với SSM theo màn hình Create parameter:
+Cost-saving option with SSM via the Create parameter screen:
 
-1. Vào Systems Manager -> Parameter Store.
+1. Go to Systems Manager -> Parameter Store.
 2. Create parameter.
 3. Name: `/learn-devops-demo/db-url`.
-4. Description: để trống.
-5. Tier: chọn `Standard`.
-6. Type: chọn `String`.
-7. Data type: giữ `text`.
-8. Value: PostgreSQL connection string tới RDS, ví dụ:
+4. Description: leave empty.
+5. Tier: select `Standard`.
+6. Type: select `String`.
+7. Data type: keep `text`.
+8. Value: PostgreSQL connection string to RDS, for example:
 
    ```text
    postgres://devops_demo:YOUR_PASSWORD@YOUR_RDS_ENDPOINT:5432/devops_demo?sslmode=require
    ```
 
-9. Tags: để trống nếu chỉ làm lab.
-10. Bấm `Create parameter`.
-11. Vào IAM, thêm quyền đọc parameter cho ECS task execution role:
-    - Mở ECS task definition revision hiện tại.
-    - Trong phần Overview, tìm `Task execution role`.
-    - Click role `ecsTaskExecutionRole` để mở IAM role.
-    - Vào tab Permissions.
-    - Bấm Add permissions -> Create inline policy.
-    - Chọn tab JSON, xóa nội dung cũ và dán policy:
+9. Tags: leave empty if just doing the lab.
+10. Click `Create parameter`.
+11. Go to IAM, add parameter read permission for the ECS task execution role:
+    - Open the current ECS task definition revision.
+    - In the Overview section, find `Task execution role`.
+    - Click the role `ecsTaskExecutionRole` to open the IAM role.
+    - Go to the Permissions tab.
+    - Click Add permissions -> Create inline policy.
+    - Select the JSON tab, delete the old content and paste the policy:
 
       ```json
       {
@@ -72,27 +72,27 @@ Phương án tiết kiệm với SSM theo màn hình Create parameter:
       }
       ```
 
-    - Đổi `ACCOUNT_ID` thành AWS account ID của bạn.
-    - Bấm Next.
+    - Change `ACCOUNT_ID` to your AWS account ID.
+    - Click Next.
     - Policy name: `ReadLearnDevopsDemoDbUrl`.
-    - Bấm Create policy.
-12. Update ECS task definition để inject secret vào env var `DATABASE_URL`.
-13. Deploy revision mới.
+    - Click Create policy.
+12. Update the ECS task definition to inject the secret into the env var `DATABASE_URL`.
+13. Deploy the new revision.
 
-Lưu ý: `String` khớp với screenshot nhưng value không được mã hóa. Nếu muốn an toàn hơn, chọn `SecureString` thay vì `String`; các bước còn lại giữ nguyên.
+Note: `String` matches the screenshot but the value is not encrypted. If you want more security, select `SecureString` instead of `String`; the remaining steps stay the same.
 
-Phương án Secrets Manager:
+Secrets Manager option:
 
-1. Vào Secrets Manager.
+1. Go to Secrets Manager.
 2. Store a new secret.
 3. Secret type: Other type of secret.
-4. Key/value hoặc plain text chứa `DATABASE_URL`.
+4. Key/value or plain text containing `DATABASE_URL`.
 5. Secret name: `learn-devops-demo/db-url`.
-6. Update ECS task definition để dùng secret.
+6. Update ECS task definition to use the secret.
 
-## Lệnh CLI kiểm tra/debug
+## CLI check/debug commands
 
-Tạo SSM parameter dạng `String` giống screenshot:
+Create SSM parameter as `String` matching the screenshot:
 
 ```bash
 aws ssm put-parameter \
@@ -102,7 +102,7 @@ aws ssm put-parameter \
   --overwrite
 ```
 
-Đọc parameter để kiểm tra quyền local:
+Read parameter to check local permissions:
 
 ```bash
 aws ssm get-parameter \
@@ -112,14 +112,14 @@ aws ssm get-parameter \
   --output text
 ```
 
-Sau khi deploy task definition revision mới, test qua ALB:
+After deploying the new task definition revision, test via ALB:
 
 ```bash
 curl -i "http://$ALB_DNS/api/db/health"
 curl -i "http://$ALB_DNS/api/orders"
 ```
 
-Policy tối thiểu cho role đọc parameter:
+Minimal policy for role to read parameter:
 
 ```json
 {
@@ -139,23 +139,23 @@ Policy tối thiểu cho role đọc parameter:
 
 ## Expected result
 
-- Task definition không chứa DB password plain text.
-- ECS task nhận `DATABASE_URL` từ SSM hoặc Secrets Manager.
-- App kết nối RDS thành công sau deploy revision mới.
-- `/api/db/health` và `/api/orders` trả HTTP 200 qua ALB.
+- Task definition does not contain DB password in plain text.
+- ECS task receives `DATABASE_URL` from SSM or Secrets Manager.
+- App connects to RDS successfully after deploying the new revision.
+- `/api/db/health` and `/api/orders` return HTTP 200 via ALB.
 
 ## Cleanup
 
-- Nếu học tiếp step 10: giữ SSM parameter hoặc secret để ECS task tiếp tục kết nối RDS.
-- Nếu dừng lab: xóa parameter hoặc secret sau khi xóa ECS service. Secrets Manager có thể phát sinh phí theo thời gian lưu trữ secret.
+- If continuing to step 10: keep SSM parameter or secret so the ECS task can continue connecting to RDS.
+- If ending the lab: delete the parameter or secret after deleting the ECS service. Secrets Manager can incur charges over time for storing the secret.
 
-Xóa SSM parameter nếu đã tạo:
+Delete SSM parameter if created:
 
 ```bash
 aws ssm delete-parameter --name /learn-devops-demo/db-url
 ```
 
-Xóa secret Secrets Manager nếu đã tạo:
+Delete Secrets Manager secret if created:
 
 ```bash
 aws secretsmanager delete-secret \
@@ -165,6 +165,6 @@ aws secretsmanager delete-secret \
 
 ## Troubleshooting
 
-- Task không start vì secret access denied: kiểm tra execution role permission.
-- App nhận env rỗng: kiểm tra mapping secret trong task definition.
-- RDS auth lỗi: secret value sai password, host hoặc database name.
+- Task doesn't start due to secret access denied: check execution role permission.
+- App receives empty env: check secret mapping in the task definition.
+- RDS auth error: secret value has wrong password, host, or database name.

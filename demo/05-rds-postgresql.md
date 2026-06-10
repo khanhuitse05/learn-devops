@@ -1,48 +1,48 @@
 # 05 - RDS PostgreSQL
 
-## Mục tiêu
+## Objective
 
-Tạo Amazon RDS PostgreSQL private để server hoàn chỉnh dùng database managed. Lab này nối tiếp sau khi app đã chạy được PostgreSQL local; không cần sửa source code.
+Create a private Amazon RDS PostgreSQL instance so the complete server can use a managed database. This lab follows after the app can already run with local PostgreSQL; no source code changes needed.
 
 ## Prerequisites
 
-- Đã hoàn thành [step 04](04-vpc-network.md).
-- VPC `learn-devops-demo-vpc` vẫn tồn tại.
-- Có 2 private subnet thuộc 2 Availability Zone khác nhau.
-- Security Group `learn-devops-demo-rds-sg` vẫn tồn tại và cho phép PostgreSQL port `5432` từ `learn-devops-demo-ecs-sg`.
-- Nếu đã cleanup network ở step 04: chạy lại [step 04](04-vpc-network.md) trước.
+- Completed [step 04](04-vpc-network.md).
+- VPC `learn-devops-demo-vpc` still exists.
+- 2 private subnets across 2 different Availability Zones exist.
+- Security Group `learn-devops-demo-rds-sg` still exists and allows PostgreSQL port `5432` from `learn-devops-demo-ecs-sg`.
+- If network was cleaned up in step 04: rerun [step 04](04-vpc-network.md) first.
 
-## Kiến thức cần hiểu
+## Knowledge to understand
 
-- RDS là managed database, không SSH vào instance.
-- DB subnet group chọn private subnets.
-- Security Group kiểm soát ai được vào port 5432.
-- Backup, storage, instance class và Multi-AZ ảnh hưởng trực tiếp đến chi phí.
-- Cùng một app image dùng được PostgreSQL local và RDS; chỉ connection config thay đổi.
+- RDS is a managed database, you don't SSH into the instance.
+- DB subnet group selects private subnets.
+- Security Group controls who can access port 5432.
+- Backup, storage, instance class, and Multi-AZ directly affect costs.
+- The same app image works with both local PostgreSQL and RDS; only connection config changes.
 
-## Chi phí ước lượng
+## Estimated cost
 
-- Nếu account còn Free Tier và chọn cấu hình đủ điều kiện, chi phí có thể rất thấp.
-- Nếu không còn Free Tier, RDS tính phí theo instance giờ, storage, backup và I/O.
-- Lab tiết kiệm nên dùng instance nhỏ nhất phù hợp, storage thấp nhất được phép và xóa ngay sau khi học.
+- If the account still has Free Tier and selects an eligible configuration, costs can be very low.
+- If Free Tier is no longer available, RDS charges by instance hours, storage, backup, and I/O.
+- A cost-saving lab should use the smallest suitable instance, the lowest allowed storage, and delete immediately after learning.
 
-## Cảnh báo service tốn tiền
+## Cost warning for paid services
 
-RDS tốn phí khi instance còn tồn tại, kể cả không có request. Không bật Multi-AZ cho lab tiết kiệm. Không để RDS chạy qua đêm nếu không cần.
+RDS incurs charges while the instance exists, even with no requests. Do not enable Multi-AZ for a cost-saving lab. Do not leave RDS running overnight if not needed.
 
-## Các bước làm bằng Console
+## Console steps
 
-Làm theo hướng dẫn chi tiết: [Tạo RDS PostgreSQL bằng AWS Console](more/create-database-console.md).
+Follow the detailed guide: [Create RDS PostgreSQL using AWS Console](more/create-database-console.md).
 
-1. Vào RDS Console.
-2. Chọn Create database.
+1. Go to RDS Console.
+2. Select Create database.
 3. Engine: PostgreSQL.
-4. Template: Free tier nếu khả dụng; nếu không, chọn Dev/Test cấu hình nhỏ.
+4. Template: Free tier if available; otherwise, select Dev/Test with a small configuration.
 5. DB identifier: `learn-devops-demo-postgres`.
 6. Master username: `devops_demo`.
-7. Password: tạo password mạnh, lưu tạm vào password manager.
-8. Instance class: chọn loại nhỏ nhất phù hợp lab.
-9. Storage: chọn mức thấp nhất, tắt autoscaling storage nếu muốn kiểm soát chi phí.
+7. Password: create a strong password, save temporarily to a password manager.
+8. Instance class: select the smallest type suitable for the lab.
+9. Storage: select the lowest level, disable storage autoscaling if you want to control costs.
 10. Connectivity:
     - VPC: `learn-devops-demo-vpc`.
     - Public access: No.
@@ -50,12 +50,12 @@ Làm theo hướng dẫn chi tiết: [Tạo RDS PostgreSQL bằng AWS Console](m
     - Security Group: `learn-devops-demo-rds-sg`.
 11. Database authentication: Password authentication.
 12. Initial database name: `devops_demo`.
-13. Backup retention: thấp nhất phù hợp lab.
+13. Backup retention: lowest suitable for the lab.
 14. Create database.
 
-## Lệnh CLI kiểm tra/debug
+## CLI check/debug commands
 
-Đặt `DB_ID` theo DB instance identifier đã nhập khi tạo RDS. Nếu dùng đúng tên gợi ý của lab:
+Set `DB_ID` to the DB instance identifier entered when creating RDS. If using the suggested lab name:
 
 ```bash
 DB_ID=learn-devops-demo-postgres
@@ -64,7 +64,7 @@ DB_USERNAME=devops_demo
 DB_PASSWORD=YOUR_PASSWORD
 ```
 
-Xem trạng thái RDS:
+View RDS status:
 
 ```bash
 aws rds describe-db-instances \
@@ -73,7 +73,7 @@ aws rds describe-db-instances \
   --output table
 ```
 
-Lấy endpoint:
+Get endpoint:
 
 ```bash
 RDS_ENDPOINT=$(aws rds describe-db-instances \
@@ -84,28 +84,28 @@ RDS_ENDPOINT=$(aws rds describe-db-instances \
 echo "$RDS_ENDPOINT"
 ```
 
-### Lưu ý khi verify RDS private
+### Note when verifying private RDS
 
-Lab này đặt `PubliclyAccessible=false`, nên RDS không có public IP và chỉ nhận kết nối từ resource có đường mạng phù hợp vào VPC. Từ máy local, endpoint private có thể không resolve DNS hoặc không thể kết nối đến port `5432`.
+This lab sets `PubliclyAccessible=false`, so RDS has no public IP and only accepts connections from resources with a network path into the VPC. From your local machine, the private endpoint may not resolve DNS or may not be reachable on port `5432`.
 
-Có thể verify cơ bản ngay trên RDS Console:
+You can do basic verification right on the RDS Console:
 
-- Status là `Available`.
-- `Publicly accessible` là `No`.
-- VPC, Security Group và endpoint đúng với cấu hình của lab.
+- Status is `Available`.
+- `Publicly accessible` is `No`.
+- VPC, Security Group, and endpoint match the lab configuration.
 
-Để chạy lệnh SQL, dùng EC2 test host, ECS task, CloudShell VPC environment, VPN hoặc bastion/SSM phù hợp. Không bật public access chỉ để debug.
+To run SQL commands, use an EC2 test host, ECS task, CloudShell VPC environment, VPN, or a suitable bastion/SSM. Do not enable public access just for debugging.
 
-Hướng dẫn chi tiết: [CloudShell VPC environment](more/cloudshell-vpc.md).
+Detailed guide: [CloudShell VPC environment](more/cloudshell-vpc.md).
 
-Từ EC2 test host hoặc ECS task trong cùng VPC:
+From an EC2 test host or ECS task in the same VPC:
 
 ```bash
 psql "host=$RDS_ENDPOINT port=5432 dbname=$DB_NAME user=$DB_USERNAME password=$DB_PASSWORD sslmode=require" \
   -c "select now();"
 ```
 
-Tạo schema demo từ host có `psql`:
+Create demo schema from a host with `psql`:
 
 ```bash
 psql "host=$RDS_ENDPOINT port=5432 dbname=$DB_NAME user=$DB_USERNAME password=$DB_PASSWORD sslmode=require" \
@@ -114,16 +114,16 @@ psql "host=$RDS_ENDPOINT port=5432 dbname=$DB_NAME user=$DB_USERNAME password=$D
 
 ## Expected result
 
-- RDS status là `available`.
-- `PubliclyAccessible` là `false`.
-- Kết nối PostgreSQL thành công từ EC2 test host hoặc client phù hợp trong cùng VPC.
-- Schema `orders` đã được tạo trên RDS.
-- Có RDS endpoint để inject vào ECS task qua `DATABASE_URL` ở step 09.
+- RDS status is `available`.
+- `PubliclyAccessible` is `false`.
+- PostgreSQL connection succeeds from an EC2 test host or suitable client in the same VPC.
+- The `orders` schema has been created on RDS.
+- Have the RDS endpoint to inject into the ECS task via `DATABASE_URL` in step 09.
 
 ## Cleanup
 
-- Nếu học tiếp: giữ RDS. Step 09 cần endpoint và database để cấu hình `DATABASE_URL` cho ECS task.
-- Nếu tạm dừng hoặc không học tiếp: nên xóa RDS để ngừng phí theo giờ. Lệnh dưới đây xóa DB không tạo final snapshot; chỉ dùng khi không cần giữ data.
+- If continuing: keep RDS. Step 09 needs the endpoint and database to configure `DATABASE_URL` for the ECS task.
+- If pausing or not continuing: delete RDS to stop hourly charges. The command below deletes the DB without creating a final snapshot; only use when you don't need to keep data.
 
 ```bash
 aws rds delete-db-instance \
@@ -132,7 +132,7 @@ aws rds delete-db-instance \
   --delete-automated-backups
 ```
 
-Kiểm tra đến khi DB biến mất:
+Check until the DB disappears:
 
 ```bash
 aws rds describe-db-instances \
@@ -141,7 +141,7 @@ aws rds describe-db-instances \
 
 ## Troubleshooting
 
-- `could not translate host name ... to address`: kiểm tra RDS đã có status `available` chưa và lấy lại endpoint bằng lệnh CLI phía trên. Endpoint có thể chưa dùng được khi instance còn đang `creating`.
-- Timeout khi connect: RDS SG chưa cho phép source SG, hoặc client không ở cùng VPC/private route.
-- Auth lỗi: kiểm tra username, password, database name.
-- SSL issue: thử thêm `sslmode=require`.
+- `could not translate host name ... to address`: check if RDS has status `available` and re-fetch the endpoint using the CLI command above. The endpoint may not be usable while the instance is still `creating`.
+- Timeout when connecting: RDS SG does not allow the source SG, or the client is not in the same VPC/private route.
+- Auth error: check username, password, database name.
+- SSL issue: try adding `sslmode=require`.

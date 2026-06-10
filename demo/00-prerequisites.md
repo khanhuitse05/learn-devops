@@ -1,50 +1,50 @@
 # 00 - Prerequisites
 
-## Mục tiêu
+## Objective
 
-Chuẩn bị AWS account an toàn trước khi tạo bất kỳ resource nào. Sau bước này bạn có AWS CLI chạy được, biết region đang dùng, có budget alarm và naming convention để cleanup.
+Prepare a safe AWS account before creating any resources. After this step you will have a working AWS CLI, know the region in use, have a budget alarm, and a naming convention for cleanup.
 
 ## Trainer Notes
 
-- Giữ AWS region nhất quán trong toàn bộ demo, mặc định là `ap-southeast-1`.
-- Dùng resource prefix `learn-devops-demo-*` để dễ cleanup.
-- Không public expose database hoặc cache.
-- Các lab sau có thể tạo resource tính phí: RDS, Fargate, ALB, ElastiCache, Grafana, CloudWatch và Secrets Manager.
-- Sau mỗi buổi thực hành, kết thúc bằng [15 - Cleanup And Cost Control](15-cleanup-cost-control.md).
+- Keep the AWS region consistent throughout the entire demo, default to `ap-southeast-1`.
+- Use the resource prefix `learn-devops-demo-*` for easy cleanup.
+- Do not publicly expose database or cache.
+- Later labs may create paid resources: RDS, Fargate, ALB, ElastiCache, Grafana, CloudWatch, and Secrets Manager.
+- After each practice session, finish with [15 - Cleanup And Cost Control](15-cleanup-cost-control.md).
 
 ## Prerequisites
 
-- Có AWS account và quyền truy cập AWS Console.
-- Có email nhận cảnh báo chi phí.
-- Máy local có terminal để cài và cấu hình AWS CLI.
+- Have an AWS account and access to the AWS Console.
+- Have an email to receive cost alerts.
+- Local machine has a terminal to install and configure AWS CLI.
 
-## Kiến thức cần hiểu
+## Knowledge to understand
 
-- Root account chỉ dùng cho việc quản trị account, không dùng hằng ngày.
-- IAM user/role nên dùng least privilege.
-- Budget alarm giúp phát hiện chi phí sớm.
-- Region quyết định nơi resource được tạo.
+- Root account should only be used for account administration, not daily use.
+- IAM user/role should use least privilege.
+- Budget alarms help detect costs early.
+- Region determines where resources are created.
 
-## Chi phí ước lượng
+## Estimated cost
 
-- IAM, MFA, AWS CLI: miễn phí.
-- AWS Budgets: thường có free quota cho budget cơ bản; kiểm tra trang Billing nếu account của bạn có điều kiện khác.
+- IAM, MFA, AWS CLI: free.
+- AWS Budgets: typically has a free quota for basic budgets; check the Billing page if your account has different conditions.
 
-## Cảnh báo service tốn tiền
+## Cost warning for paid services
 
-Chưa tạo compute/database ở bước này. Tuy vậy hãy tạo budget trước các lab sau vì RDS, NAT Gateway, ALB và Fargate có thể tính phí theo giờ.
+No compute/database created at this step. However, create a budget before later labs because RDS, NAT Gateway, ALB, and Fargate can charge hourly.
 
-## Các bước làm bằng Console
+## Console steps
 
-1. Đăng nhập AWS Console.
-2. Bật MFA cho root user.
-3. Vào Billing and Cost Management.
-4. Tạo budget tên `learn-devops-demo-budget`.
-5. Đặt ngưỡng nhỏ cho lab, ví dụ 5-10 USD.
-6. Thêm email nhận cảnh báo.
-7. Chọn region mặc định cho lab: `ap-southeast-1`.
+1. Sign in to the AWS Console.
+2. Enable MFA for the root user.
+3. Go to Billing and Cost Management.
+4. Create a budget named `learn-devops-demo-budget`.
+5. Set a small threshold for the lab, e.g., 5-10 USD.
+6. Add an email to receive alerts.
+7. Select the default region for the lab: `ap-southeast-1`.
 
-## Lệnh CLI kiểm tra/debug
+## CLI check/debug commands
 
 ```bash
 aws configure
@@ -56,7 +56,7 @@ aws sts get-caller-identity
 aws configure list
 ```
 
-Kiểm tra region:
+Check region:
 
 ```bash
 aws ec2 describe-availability-zones \
@@ -67,17 +67,17 @@ aws ec2 describe-availability-zones \
 
 ## Expected result
 
-- `aws sts get-caller-identity` trả về `Account`, `Arn`, `UserId`.
-- Console có budget alarm.
-- Bạn biết chính xác region đang dùng.
+- `aws sts get-caller-identity` returns `Account`, `Arn`, `UserId`.
+- Console has a budget alarm.
+- You know exactly which region is in use.
 
 ## Cleanup
 
-- Nếu học tiếp: giữ budget để bảo vệ account trong các lab sau.
-- Nếu dừng tại đây: vẫn nên giữ budget. Budget không tạo AWS resource chạy liên tục.
+- If continuing: keep the budget to protect the account in later labs.
+- If stopping here: still keep the budget. Budget does not create continuously running AWS resources.
 
 ## Troubleshooting
 
-- `Unable to locate credentials`: chạy lại `aws configure` hoặc kiểm tra profile.
-- `AccessDenied`: user/role chưa có quyền gọi service.
-- Sai region: export lại `AWS_REGION` và `AWS_DEFAULT_REGION`.
+- `Unable to locate credentials`: rerun `aws configure` or check the profile.
+- `AccessDenied`: user/role does not have permission to call the service.
+- Wrong region: re-export `AWS_REGION` and `AWS_DEFAULT_REGION`.

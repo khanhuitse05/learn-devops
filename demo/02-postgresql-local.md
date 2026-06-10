@@ -1,67 +1,67 @@
 # 02 - PostgreSQL Local
 
-## Mục tiêu
+## Objective
 
-Chạy PostgreSQL local để dùng các endpoint database đã có sẵn trong server. Bước này chỉ cấu hình runtime và tạo schema, không sửa source code.
+Run PostgreSQL locally to use the database endpoints already present in the server. This step only configures runtime and creates schema, without modifying source code.
 
 ## Prerequisites
 
-- Đã chạy app local và hiểu endpoint theo [step 01](01-local-server-baseline.md).
-- Máy local có Docker Desktop và Docker daemon đang chạy.
-- Port `5432` đang trống hoặc bạn biết cách đổi port host.
-- Nếu đã cleanup step 01: không cần tạo lại resource nào; chỉ chạy lại app khi đến bước test API.
+- Ran the local app and understood endpoints per [step 01](01-local-server-baseline.md).
+- Local machine has Docker Desktop and Docker daemon running.
+- Port `5432` is free or you know how to change the host port.
+- If step 01 was cleaned up: no need to recreate any resources; just rerun the app when reaching the API test step.
 
-## Kiến thức cần hiểu
+## Knowledge to understand
 
-- RDS PostgreSQL vẫn dùng protocol PostgreSQL chuẩn.
-- App nên đọc connection config từ env vars.
-- Health check của ALB/ECS nên tách khỏi DB health.
-- DB migration/seed data nên chạy có kiểm soát, không chạy bừa trên production.
+- RDS PostgreSQL still uses the standard PostgreSQL protocol.
+- The app should read connection config from env vars.
+- ALB/ECS health checks should be separate from DB health.
+- DB migration/seed data should run in a controlled manner, not run loosely on production.
 
-## Chi phí ước lượng
+## Estimated cost
 
-Miễn phí nếu chạy PostgreSQL local bằng Docker hoặc máy cá nhân.
+Free if running PostgreSQL locally via Docker or personal machine.
 
-## Cảnh báo service tốn tiền
+## Cost warning for paid services
 
-Chưa tạo RDS ở bước này. Đừng tạo RDS trước khi app có thể kết nối PostgreSQL local.
+No RDS created at this step. Do not create RDS before the app can connect to local PostgreSQL.
 
-## Các bước làm bằng Console
+## Console steps
 
-Không dùng AWS Console trong bước này.
+No AWS Console used in this step.
 
-## Cần chạy những gì?
+## What needs to run?
 
-Có ba process khác nhau:
+There are three different processes:
 
-| Process | Có cần chạy không? | Mục đích |
+| Process | Must run? | Purpose |
 | --- | --- | --- |
-| Docker Desktop daemon | Bắt buộc | Docker CLI cần daemon để tạo và chạy container. |
-| PostgreSQL container | Bắt buộc | Cung cấp PostgreSQL local trên port `5432`. |
-| Node.js app trong `./server` | Chỉ cần khi test API | Cung cấp `/api/db/health`, `/api/orders`, và các endpoint HTTP khác. |
+| Docker Desktop daemon | Required | Docker CLI needs the daemon to create and run containers. |
+| PostgreSQL container | Required | Provides local PostgreSQL on port `5432`. |
+| Node.js app in `./server` | Only when testing APIs | Provides `/api/db/health`, `/api/orders`, and other HTTP endpoints. |
 
-Nếu chỉ muốn kiểm tra PostgreSQL bằng `psql`, chưa cần chạy Node.js app.
+If you only want to test PostgreSQL with `psql`, you don't need to run the Node.js app yet.
 
-## Server đã sẵn sàng
+## Server is already ready
 
-Các file cần thiết đã có trong `./server`:
+The necessary files are already in `./server`:
 
-- `app.js`: kết nối PostgreSQL và cung cấp endpoint database.
-- `schema.sql`: tạo bảng `orders` và seed data idempotent.
-- `package.json`: đã khai báo dependency `pg`.
+- `app.js`: connects to PostgreSQL and provides database endpoints.
+- `schema.sql`: creates the `orders` table and idempotent seed data.
+- `package.json`: already declares the `pg` dependency.
 
-Hai nhóm env var có mục đích khác nhau:
+Two groups of env vars have different purposes:
 
-- `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`: truyền vào PostgreSQL container khi tạo container lần đầu.
-- `DATABASE_URL`: truyền vào Node.js app khi khởi động app để app biết cách kết nối PostgreSQL.
+- `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`: passed to the PostgreSQL container when creating the container for the first time.
+- `DATABASE_URL`: passed to the Node.js app on startup so the app knows how to connect to PostgreSQL.
 
-Node.js app đọc config kết nối từ:
+The Node.js app reads connection config from:
 
 ```bash
 DATABASE_URL=postgres://devops_demo:devops_demo@localhost:5432/devops_demo
 ```
 
-Hoặc:
+Or:
 
 ```bash
 PGHOST=localhost
@@ -71,36 +71,36 @@ PGUSER=devops_demo
 PGPASSWORD=devops_demo
 ```
 
-Không bắt buộc tạo file `.env`. App hiện không tự động load file `.env`, vì vậy cách đơn giản nhất là truyền `DATABASE_URL` ngay trước lệnh `node app.js`.
+Creating a `.env` file is not required. The app currently does not auto-load `.env` files, so the simplest way is to pass `DATABASE_URL` right before the `node app.js` command.
 
-Endpoint đã có:
+Existing endpoints:
 
-- `GET /api/db/health`: chạy `select 1`.
-- `GET /api/orders`: đọc danh sách order.
-- `GET /api/orders/:id`: đọc một order.
-- `POST /api/orders`: tạo order demo nếu muốn thực hành write.
+- `GET /api/db/health`: runs `select 1`.
+- `GET /api/orders`: reads the order list.
+- `GET /api/orders/:id`: reads a single order.
+- `POST /api/orders`: creates a demo order if you want to practice writes.
 
-Endpoint health riêng biệt:
+Separate health endpoints:
 
-- `GET /health`: chỉ báo app process còn sống, không phụ thuộc DB.
-- `GET /flow`: vẫn dùng để demo request path.
+- `GET /health`: only indicates the app process is alive, not dependent on DB.
+- `GET /flow`: still used to demo the request path.
 
-## Thực hành từng bước
+## Step-by-step practice
 
-### 1. Khởi động Docker Desktop
+### 1. Start Docker Desktop
 
-Trên macOS, Docker CLI chỉ hoạt động sau khi Docker Desktop daemon đã chạy:
+On macOS, Docker CLI only works after Docker Desktop daemon is running:
 
 ```bash
 docker desktop start
 docker info
 ```
 
-Đợi đến khi `docker info` hiển thị phần `Server` mà không có lỗi kết nối Docker API.
+Wait until `docker info` shows the `Server` section without Docker API connection errors.
 
-### 2. Chạy PostgreSQL local
+### 2. Run PostgreSQL locally
 
-Từ root repo:
+From the repo root:
 
 ```bash
 docker run --name learn-devops-demo-postgres \
@@ -111,38 +111,38 @@ docker run --name learn-devops-demo-postgres \
   -d postgres:16-alpine
 ```
 
-Lệnh `docker run` tạo container lần đầu. Nếu container đã tồn tại nhưng đang dừng, không chạy lại lệnh trên; dùng:
+The `docker run` command creates the container for the first time. If the container already exists but is stopped, do not rerun the above command; use:
 
 ```bash
 docker start learn-devops-demo-postgres
 ```
 
-### 3. Kiểm tra DB và tạo schema
+### 3. Check DB and create schema
 
-Kiểm tra PostgreSQL đã sẵn sàng:
+Check that PostgreSQL is ready:
 
 ```bash
 docker exec -it learn-devops-demo-postgres \
   psql -U devops_demo -d devops_demo -c "select version();"
 ```
 
-Tạo bảng và seed data từ root repo:
+Create table and seed data from the repo root:
 
 ```bash
 docker exec -i learn-devops-demo-postgres \
   psql -U devops_demo -d devops_demo < server/schema.sql
 ```
 
-### 4. Chạy Node.js app với env kết nối DB
+### 4. Run Node.js app with DB connection env
 
-Nếu app của bước 01 vẫn đang chạy, dừng app cũ bằng `Ctrl+C`. Sau đó:
+If the app from step 01 is still running, stop the old app with `Ctrl+C`. Then:
 
 ```bash
 cd server
 DATABASE_URL=postgres://devops_demo:devops_demo@localhost:5432/devops_demo node app.js
 ```
 
-`DATABASE_URL=... node app.js` chỉ áp dụng env var cho lần chạy app này. Nếu muốn export env cho cả terminal hiện tại:
+`DATABASE_URL=... node app.js` applies the env var only for this app run. If you want to export the env for the entire current terminal:
 
 ```bash
 cd server
@@ -150,7 +150,7 @@ export DATABASE_URL=postgres://devops_demo:devops_demo@localhost:5432/devops_dem
 node app.js
 ```
 
-### 5. Test API từ terminal khác
+### 5. Test API from another terminal
 
 ```bash
 curl -i http://localhost:3000/api/db/health
@@ -164,29 +164,29 @@ curl -i \
 
 ## Expected result
 
-- PostgreSQL local chạy trên port 5432.
-- Có thể kết nối database bằng TablePlus qua `localhost:5432`.
-- `select version()` thành công.
-- `/api/db/health` trả HTTP 200.
-- `/api/orders` và `/api/orders/1` trả dữ liệu từ bảng `orders`.
-- `POST /api/orders` tạo order mới và trả HTTP 201.
+- Local PostgreSQL runs on port 5432.
+- Can connect to the database via TablePlus at `localhost:5432`.
+- `select version()` succeeds.
+- `/api/db/health` returns HTTP 200.
+- `/api/orders` and `/api/orders/1` return data from the `orders` table.
+- `POST /api/orders` creates a new order and returns HTTP 201.
 
 ## Cleanup
 
-- Nếu học tiếp step 03: dừng app bằng `Ctrl+C`, sau đó xóa container PostgreSQL tạo thủ công để tránh trùng port với Docker Compose.
-- Nếu dừng tại đây: dừng app bằng `Ctrl+C` và xóa container PostgreSQL local.
+- If continuing to step 03: stop the app with `Ctrl+C`, then delete the manually created PostgreSQL container to avoid port conflicts with Docker Compose.
+- If stopping here: stop the app with `Ctrl+C` and delete the local PostgreSQL container.
 
 ```bash
 docker stop learn-devops-demo-postgres
 docker rm learn-devops-demo-postgres
 ```
 
-Nếu muốn xóa toàn bộ data volume do Docker tạo, kiểm tra volume trước rồi xóa volume không còn dùng.
+If you want to delete all data volumes created by Docker, check volumes first then delete unused volumes.
 
 ## Troubleshooting
 
-- `failed to connect to the docker API` hoặc `docker.sock: no such file or directory`: Docker Desktop daemon chưa chạy. Chạy `docker desktop start`, sau đó đợi `docker info` thành công.
-- `Conflict. The container name ... is already in use`: container đã được tạo trước đó. Dùng `docker start learn-devops-demo-postgres`, hoặc xóa container cũ nếu muốn tạo lại.
-- `port is already allocated`: máy đã có PostgreSQL chạy trên 5432, đổi port host sang `5433:5432`.
-- `password authentication failed`: kiểm tra user/password trong `DATABASE_URL`.
-- App health OK nhưng DB health lỗi: đây là đúng thiết kế, debug DB riêng.
+- `failed to connect to the docker API` or `docker.sock: no such file or directory`: Docker Desktop daemon is not running. Run `docker desktop start`, then wait for `docker info` to succeed.
+- `Conflict. The container name ... is already in use`: the container was created before. Use `docker start learn-devops-demo-postgres`, or delete the old container if you want to recreate.
+- `port is already allocated`: machine already has PostgreSQL running on 5432, change the host port to `5433:5432`.
+- `password authentication failed`: check user/password in `DATABASE_URL`.
+- App health OK but DB health error: this is by design, debug DB separately.

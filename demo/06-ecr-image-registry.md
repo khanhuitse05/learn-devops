@@ -1,67 +1,67 @@
 # 06 - ECR Image Registry
 
-## Mục tiêu
+## Objective
 
-Build Docker image hoàn chỉnh từ `./server` và push lên Amazon ECR để ECS có thể pull image. Các bước sau chỉ cấu hình hạ tầng và secret, không thêm code vào image.
+Build a complete Docker image from `./server` and push it to Amazon ECR so ECS can pull the image. Later steps only configure infrastructure and secrets, without adding code to the image.
 
 ## Prerequisites
 
-- Đã hoàn thành local Docker flow ở [step 03](03-docker-compose-app-postgres.md).
-- Docker Desktop và Docker daemon đang chạy.
-- AWS CLI đăng nhập đúng account và region theo [step 00](00-prerequisites.md).
-- Không cần giữ RDS chạy để build và push image.
-- Nếu ECR repository đã tồn tại từ lần demo trước, có thể dùng lại hoặc xóa rồi tạo lại.
+- Completed local Docker flow in [step 03](03-docker-compose-app-postgres.md).
+- Docker Desktop and Docker daemon running.
+- AWS CLI logged into the correct account and region per [step 00](00-prerequisites.md).
+- No need to keep RDS running to build and push the image.
+- If the ECR repository already exists from a previous demo, you can reuse it or delete and recreate.
 
-## Kiến thức cần hiểu
+## Knowledge to understand
 
-- ECR repository lưu Docker image.
-- Image đã chứa app health, flow demo, `/test-error` và PostgreSQL endpoints.
-- ECS task definition nên dùng image tag cụ thể, ví dụ commit SHA hoặc version.
-- `latest` tiện cho lab nhưng không tốt cho rollback production.
-- ECR storage tính phí theo dung lượng image.
+- ECR repository stores Docker images.
+- The image already contains app health, flow demo, `/test-error`, and PostgreSQL endpoints.
+- ECS task definition should use a specific image tag, e.g., commit SHA or version.
+- `latest` is convenient for labs but not good for production rollback.
+- ECR storage is charged by image size.
 
-## Chi phí ước lượng
+## Estimated cost
 
-- ECR repository không chạy compute.
-- Chi phí chủ yếu là storage image và data transfer nếu có.
-- Với vài image nhỏ cho lab, chi phí thường thấp, nhưng vẫn nên xóa repo sau khi học.
+- ECR repository does not run compute.
+- Cost primarily comes from image storage and data transfer if applicable.
+- With a few small images for the lab, costs are usually low, but still delete the repo after learning.
 
-## Cảnh báo service tốn tiền
+## Cost warning for paid services
 
-ECR có thể phát sinh phí storage nếu giữ nhiều image. Tạo lifecycle policy hoặc xóa repo sau lab.
+ECR can incur storage costs if you keep many images. Create a lifecycle policy or delete the repo after the lab.
 
-## Các bước làm bằng Console
+## Console steps
 
-1. Vào ECR Console.
-2. Chọn region `ap-southeast-1` hoặc region đang dùng cho lab.
-3. Trong menu **Private registry**, chọn **Repositories**.
-4. Chọn **Create repository**.
-5. Trong **General settings**, nhập Repository name: `learn-devops-demo-node`.
-6. Trong **Image tag settings**, chọn **Mutable** để đơn giản cho lab. Để trống **Mutable tag exclusions**.
+1. Go to ECR Console.
+2. Select region `ap-southeast-1` or the region used for the lab.
+3. In the **Private registry** menu, select **Repositories**.
+4. Select **Create repository**.
+5. Under **General settings**, enter Repository name: `learn-devops-demo-node`.
+6. Under **Image tag settings**, select **Mutable** for simplicity in the lab. Leave **Mutable tag exclusions** empty.
 
-- `Mutable`: cho phép push lại cùng một tag.
-- Production nên cân nhắc **Immutable** để tránh ghi đè image đã deploy.
+- `Mutable`: allows pushing the same tag again.
+- Production should consider **Immutable** to avoid overwriting a deployed image.
 
-7. Trong **Encryption settings**, chọn **AES-256**. Lab không cần dùng **AWS KMS** vì KMS có thể phát sinh thêm phí.
-2. Trong **Image scanning settings - deprecated**, có thể giữ mặc định. Cấu hình scan mới nên thực hiện ở registry level.
-3. Chọn **Create**.
+7. Under **Encryption settings**, select **AES-256**. The lab does not need **AWS KMS** because KMS may incur additional charges.
+8. Under **Image scanning settings - deprecated**, you can keep defaults. New scan configuration should be done at the registry level.
+9. Select **Create**.
 
-Nếu muốn bật scan khi push image:
+If you want to enable scan on push:
 
-1. Trong menu **Private registry**, chọn **Scanning**.
-2. Chọn **Basic scanning**.
-3. Thêm **Scan on push filter** cho repository `learn-devops-demo-node` hoặc áp dụng cho toàn bộ repository.
+1. In the **Private registry** menu, select **Scanning**.
+2. Select **Basic scanning**.
+3. Add a **Scan on push filter** for the repository `learn-devops-demo-node` or apply to all repositories.
 
-## Lệnh CLI kiểm tra/debug
+## CLI check/debug commands
 
-Tạo repo bằng CLI nếu chưa tạo Console:
+Create repo via CLI if not created via Console:
 
 ```bash
 aws ecr create-repository \
   --repository-name learn-devops-demo-node
 ```
 
-Login ECR:
+Login to ECR:
 
 ```bash
 AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
@@ -71,7 +71,7 @@ aws ecr get-login-password --region "$AWS_REGION" \
   | docker login --username AWS --password-stdin "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com"
 ```
 
-Build và push:
+Build and push:
 
 ```bash
 cd server
@@ -80,7 +80,7 @@ docker tag learn-devops-demo-node:local "$ECR_URI:demo-001"
 docker push "$ECR_URI:demo-001"
 ```
 
-Kiểm tra image:
+Check image:
 
 ```bash
 aws ecr describe-images \
@@ -91,15 +91,15 @@ aws ecr describe-images \
 
 ## Expected result
 
-- ECR repo `learn-devops-demo-node` tồn tại.
-- Image tag `demo-001` xuất hiện trong ECR.
-- Bạn có full image URI để dùng trong ECS task definition.
-- Không cần sửa source hoặc build lại image chỉ để chuyển từ PostgreSQL local sang RDS.
+- ECR repo `learn-devops-demo-node` exists.
+- Image tag `demo-001` appears in ECR.
+- You have the full image URI to use in the ECS task definition.
+- No need to modify source or rebuild the image just to switch from local PostgreSQL to RDS.
 
 ## Cleanup
 
-- Nếu học tiếp: giữ ECR repository và image tag `demo-001`. Step 07 cần image này để chạy ECS task.
-- Nếu dừng tại đây: xóa repository và toàn bộ image để ngừng lưu trữ image.
+- If continuing: keep ECR repository and image tag `demo-001`. Step 07 needs this image to run the ECS task.
+- If stopping here: delete the repository and all images to stop image storage.
 
 ```bash
 aws ecr delete-repository \
@@ -109,6 +109,6 @@ aws ecr delete-repository \
 
 ## Troubleshooting
 
-- Docker login không thành công: kiểm tra region và account ID.
-- Push denied: IAM user/role thiếu quyền ECR.
-- ECS pull image lỗi sau này: kiểm tra ECS execution role có quyền `AmazonECSTaskExecutionRolePolicy`.
+- Docker login fails: check region and account ID.
+- Push denied: IAM user/role lacks ECR permissions.
+- ECS pull image error later: check ECS execution role has `AmazonECSTaskExecutionRolePolicy`.

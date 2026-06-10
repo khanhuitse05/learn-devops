@@ -1,14 +1,14 @@
-# Tạo VPC bằng AWS Console
+# Create VPC using AWS Console
 
-Hướng dẫn này dùng wizard `VPC and more` để tạo network cho bài [04 - VPC Network](../04-vpc-network.md).
+This guide uses the `VPC and more` wizard to create the network for [04 - VPC Network](../04-vpc-network.md).
 
 ## Prerequisites
 
-- Đã hoàn thành [step 00](../00-prerequisites.md): đăng nhập đúng AWS account và chọn đúng region.
-- Kiểm tra VPC Console trước khi tạo để tránh tạo trùng `learn-devops-demo-vpc`.
-- Nếu VPC lab đã tồn tại và còn đủ subnet, route table và Internet Gateway, không cần tạo lại.
+- Completed [step 00](../00-prerequisites.md): logged into the correct AWS account and selected the correct region.
+- Check VPC Console before creating to avoid duplicating `learn-devops-demo-vpc`.
+- If the lab VPC already exists and still has enough subnets, route tables, and Internet Gateway, no need to recreate.
 
-## Kết quả cần tạo
+## Desired result
 
 ```text
 learn-devops-demo-vpc: 10.0.0.0/16
@@ -18,90 +18,82 @@ learn-devops-demo-vpc: 10.0.0.0/16
 └── Private subnet B: 10.0.12.0/24
 ```
 
-Public subnet sẽ dành cho ALB. Private subnet sẽ dành cho ECS task và RDS.
+Public subnets will be for ALB. Private subnets will be for ECS tasks and RDS.
 
-Wizard tự sinh Name tag cho subnet, thường kèm loại subnet và Availability Zone. Trong bài này, hãy dùng CIDR để nhận diện chính xác từng subnet. Sau khi tạo xong, bạn có thể đổi Name tag thành `learn-devops-demo-public-a`, `learn-devops-demo-public-b`, `learn-devops-demo-private-a` và `learn-devops-demo-private-b` để dễ theo dõi.
+The wizard auto-generates Name tags for subnets, typically including subnet type and Availability Zone. In this lab, use CIDR to precisely identify each subnet. After creation, you can rename Name tags to `learn-devops-demo-public-a`, `learn-devops-demo-public-b`, `learn-devops-demo-private-a`, and `learn-devops-demo-private-b` for easier tracking.
 
-## Mở màn hình tạo VPC
+## Open the VPC creation screen
 
-1. Đăng nhập AWS Console.
-2. Tìm service `VPC`.
-3. Vào `Your VPCs`.
-4. Nhấn `Create VPC`.
+1. Sign in to AWS Console.
+2. Find the `VPC` service.
+3. Go to `Your VPCs`.
+4. Click `Create VPC`.
 
-Màn hình cần điền:
+Screen to fill in:
 
-![Màn hình Create VPC với lựa chọn VPC and more](../images/04-create-vpc.png)
+![Create VPC screen with VPC and more option](../images/04-create-vpc.png)
 
-## Điền VPC settings
+## Fill in VPC settings
 
+| Field                      | Value to select or enter                           | Explanation                                                      |
+| -------------------------- | -------------------------------------------------- | ---------------------------------------------------------------- |
+| `Resources to create`      | `VPC and more`                                     | AWS creates the VPC and basic network components in one go.      |
+| `Name tag auto-generation` | Enable `Auto-generate`, enter `learn-devops-demo`  | AWS auto-generates Name tags for VPC, subnets, and route tables. |
+| `IPv4 CIDR block`          | `10.0.0.0/16`                                      | Overall private IP range for the VPC. Subnets take IPs from this.|
+| `IPv6 CIDR block`          | `No IPv6 CIDR block`                               | This lab does not use IPv6 yet.                                  |
+| `Tenancy`                  | `Default`                                          | Use normal configuration. No need for dedicated hardware.        |
+| `Encryption settings`      | Keep default                                       | This lab does not need changes yet.                              |
 
-| Field                      | Giá trị cần chọn hoặc nhập                        | Giải thích                                                    |
-| -------------------------- | ------------------------------------------------- | ------------------------------------------------------------- |
-| `Resources to create`      | `VPC and more`                                    | AWS tạo VPC và các thành phần network cơ bản trong một lần.   |
-| `Name tag auto-generation` | Bật `Auto-generate`, nhập `learn-devops-demo`     | AWS tự tạo Name tag cho VPC, subnet và route table.           |
-| `IPv4 CIDR block`          | `10.0.0.0/16`                                     | Dải IP private tổng của VPC. Các subnet sẽ lấy IP từ dải này. |
-| `IPv6 CIDR block`          | `No IPv6 CIDR block`                              | Lab này chưa dùng IPv6.                                       |
-| `Tenancy`                  | `Default`                                         | Dùng cấu hình thông thường. Không cần dedicated hardware.     |
-| `Encryption settings`      | Giữ mặc định                                      | Lab này chưa cần thay đổi.                                    |
+## Fill in subnet settings
 
+| Field                                | Value to select  | Explanation                                                   |
+| ------------------------------------ | ---------------- | ------------------------------------------------------------- |
+| `Number of Availability Zones (AZs)` | `2`              | Create subnets in two different AZs to prepare for ALB.       |
+| `Customize AZs`                      | Keep default     | AWS auto-selects two AZs in the current region.               |
+| `Number of public subnets`           | `2`              | Each AZ has one public subnet for ALB.                        |
+| `Number of private subnets`          | `2`              | Each AZ has one private subnet for ECS tasks and RDS.         |
 
-## Điền subnet settings
+You can keep the default CIDRs auto-generated by AWS. ALB, ECS, and RDS still work normally if there are enough 2 public subnets, 2 private subnets, and non-overlapping CIDRs.
 
+If you want easy-to-read CIDRs that are easy to cross-reference when debugging, open `Customize subnets CIDR blocks`, then fill in:
 
-| Field                                | Giá trị cần chọn | Giải thích                                             |
-| ------------------------------------ | ---------------- | ------------------------------------------------------ |
-| `Number of Availability Zones (AZs)` | `2`              | Tạo subnet ở hai AZ khác nhau để chuẩn bị cho ALB.     |
-| `Customize AZs`                      | Giữ mặc định     | AWS tự chọn hai AZ trong region hiện tại.              |
-| `Number of public subnets`           | `2`              | Mỗi AZ có một public subnet dành cho ALB.              |
-| `Number of private subnets`          | `2`              | Mỗi AZ có một private subnet dành cho ECS task và RDS. |
+| Field                                       | CIDR            |
+| ------------------------------------------- | --------------- |
+| Public subnet CIDR block in the first AZ    | `10.0.1.0/24`   |
+| Public subnet CIDR block in the second AZ   | `10.0.2.0/24`   |
+| Private subnet CIDR block in the first AZ   | `10.0.11.0/24`  |
+| Private subnet CIDR block in the second AZ  | `10.0.12.0/24`  |
 
+Specific AZ names may vary by region, e.g., `ap-southeast-1a` and `ap-southeast-1b`. The important thing is having two different AZs.
 
-Có thể giữ CIDR mặc định do AWS tự sinh. ALB, ECS và RDS vẫn hoạt động bình thường nếu có đủ 2 public subnet, 2 private subnet và các CIDR không trùng nhau.
+## Fill in gateway and DNS settings
 
-Nếu muốn CIDR dễ đọc và dễ đối chiếu khi debug, mở `Customize subnets CIDR blocks`, sau đó điền:
+| Field                   | Value to select  | Explanation                                                                                        |
+| ----------------------- | ---------------- | -------------------------------------------------------------------------------------------------- |
+| `NAT gateways ($)`      | `None`           | Does not incur NAT Gateway charges. Private subnets don't need to access the internet in this lab. |
+| `VPC endpoints`         | `None`           | Not needed at this step.                                                                           |
+| `Enable DNS hostnames`  | Enable           | Allows resources in the VPC to use DNS hostnames when needed.                                      |
+| `Enable DNS resolution` | Enable           | Enables DNS resolution within the VPC.                                                             |
 
+Click `Create VPC` and wait for AWS to report completion.
 
-| Field                                   | CIDR           |
-| --------------------------------------- | -------------- |
-| Public subnet CIDR block ở AZ thứ nhất  | `10.0.1.0/24`  |
-| Public subnet CIDR block ở AZ thứ hai   | `10.0.2.0/24`  |
-| Private subnet CIDR block ở AZ thứ nhất | `10.0.11.0/24` |
-| Private subnet CIDR block ở AZ thứ hai  | `10.0.12.0/24` |
+## Check after creation
 
+Go to `Your VPCs`, select the newly created VPC, and confirm the Name tag is `learn-devops-demo-vpc`.
 
-Tên AZ cụ thể có thể khác nhau tùy region, ví dụ `ap-southeast-1a` và `ap-southeast-1b`. Điều quan trọng là có hai AZ khác nhau.
+Go to `Subnets`, filter by the newly created VPC, and confirm:
 
-## Điền gateway và DNS settings
+- There are `2` public subnets.
+- There are `2` private subnets.
+- The four subnets belong to exactly two different AZs.
+- The CIDRs of the four subnets do not overlap and all belong to VPC `10.0.0.0/16`.
+- If you customized CIDRs, the four subnets match the table above.
 
+Go to `Route tables` and confirm:
 
-| Field                   | Giá trị cần chọn | Giải thích                                                                                   |
-| ----------------------- | ---------------- | -------------------------------------------------------------------------------------------- |
-| `NAT gateways ($)`      | `None`           | Không phát sinh phí NAT Gateway. Private subnet chưa cần tự truy cập Internet trong lab này. |
-| `VPC endpoints`         | `None`           | Chưa cần dùng ở bước này.                                                                    |
-| `Enable DNS hostnames`  | Bật              | Cho phép resource trong VPC sử dụng DNS hostname khi cần.                                    |
-| `Enable DNS resolution` | Bật              | Cho phép phân giải DNS trong VPC.                                                            |
+- Public route table has route `0.0.0.0/0` pointing to Internet Gateway (`igw-...`).
+- Private route table only needs local route at this step.
 
+## Note about NAT Gateway
 
-Nhấn `Create VPC` và chờ đến khi AWS báo hoàn tất.
-
-## Kiểm tra sau khi tạo
-
-Vào `Your VPCs`, chọn VPC vừa tạo và xác nhận Name tag là `learn-devops-demo-vpc`.
-
-Vào `Subnets`, lọc theo VPC vừa tạo và xác nhận:
-
-- Có `2` public subnet.
-- Có `2` private subnet.
-- Bốn subnet thuộc đúng hai AZ khác nhau.
-- CIDR của bốn subnet không trùng nhau và đều thuộc VPC `10.0.0.0/16`.
-- Nếu đã customize CIDR, bốn subnet khớp với bảng phía trên.
-
-Vào `Route tables` và xác nhận:
-
-- Public route table có route `0.0.0.0/0` trỏ đến Internet Gateway (`igw-...`).
-- Private route table chỉ cần local route ở bước này.
-
-## Lưu ý về NAT Gateway
-
-Chỉ tạo NAT Gateway khi resource trong private subnet cần chủ động kết nối ra Internet, ví dụ tải package hoặc gọi API bên ngoài. NAT Gateway có phí theo thời gian sử dụng và lượng data xử lý, nên không tạo trong lab tối giản.
+Only create a NAT Gateway when resources in private subnets need to actively connect to the internet, e.g., to download packages or call external APIs. NAT Gateway charges by usage time and data processed, so do not create one in the minimal lab.

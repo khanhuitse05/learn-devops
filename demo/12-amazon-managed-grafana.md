@@ -1,49 +1,49 @@
 # 12 - Amazon Managed Grafana
 
-## Mục tiêu
+## Objective
 
-Tạo Amazon Managed Grafana workspace và dùng CloudWatch làm data source để xem dashboard cho ECS, ALB và app logs/metrics.
+Create an Amazon Managed Grafana workspace and use CloudWatch as a data source to view dashboards for ECS, ALB, and app logs/metrics.
 
 ## Prerequisites
 
-- Đã hoàn thành [step 10](10-observability.md): CloudWatch logs, metrics hoặc alarm đã có dữ liệu.
-- Nên giữ ECS service và ALB đang chạy để dashboard có datapoint mới.
-- AWS account có quyền tạo Amazon Managed Grafana workspace và IAM role liên quan.
+- Completed [step 10](10-observability.md): CloudWatch logs, metrics, or alarms have data.
+- Should keep ECS service and ALB running so the dashboard has new datapoints.
+- AWS account has permission to create Amazon Managed Grafana workspace and related IAM roles.
 
-## Kiến thức cần hiểu
+## Knowledge to understand
 
-- Grafana là dashboard layer; CloudWatch vẫn là nơi lưu logs và metrics trong lab này.
-- Amazon Managed Grafana cần workspace, authentication và data source permission.
-- Dashboard chỉ có ích khi metric namespace và region đúng.
+- Grafana is the dashboard layer; CloudWatch is still where logs and metrics are stored in this lab.
+- Amazon Managed Grafana needs a workspace, authentication, and data source permission.
+- Dashboard is only useful when metric namespace and region are correct.
 
-## Chi phí ước lượng
+## Estimated cost
 
-Amazon Managed Grafana có thể tính phí workspace/user. Xóa workspace sau lab nếu không dùng tiếp.
+Amazon Managed Grafana can charge per workspace/user. Delete the workspace after the lab if not continuing use.
 
-## Cảnh báo service tốn tiền
+## Cost warning for paid services
 
-Đừng giữ workspace demo lâu nếu chỉ học một buổi. Kiểm tra pricing hiện tại trong account trước khi bật nhiều user.
+Don't keep the demo workspace for a long time if only learning for one session. Check current pricing in the account before enabling many users.
 
-## Các bước làm bằng Console
+## Console steps
 
-1. Vào Amazon Managed Grafana.
+1. Go to Amazon Managed Grafana.
 2. Create workspace.
 3. Workspace name: `learn-devops-demo-grafana`.
-4. Authentication: chọn cách đơn giản nhất account bạn hỗ trợ, thường là IAM Identity Center.
+4. Authentication: choose the simplest method your account supports, usually IAM Identity Center.
 5. Permission type: service managed.
-6. Data sources: bật CloudWatch.
-7. Sau khi workspace active, mở Grafana URL.
-8. Add data source CloudWatch nếu chưa có.
-9. Tạo dashboard với panels:
+6. Data sources: enable CloudWatch.
+7. After the workspace is active, open the Grafana URL.
+8. Add CloudWatch data source if not already present.
+9. Create a dashboard with panels:
    - ECS CPU utilization.
    - ECS memory utilization.
    - ALB healthy host count.
    - ALB HTTP 5xx count.
-10. Save dashboard tên `learn-devops-demo-ops`.
+10. Save dashboard named `learn-devops-demo-ops`.
 
-## Lệnh CLI kiểm tra/debug
+## CLI check/debug commands
 
-Liệt kê workspace:
+List workspaces:
 
 ```bash
 aws grafana list-workspaces \
@@ -51,14 +51,14 @@ aws grafana list-workspaces \
   --output table
 ```
 
-Lấy chi tiết workspace:
+Get workspace details:
 
 ```bash
 aws grafana describe-workspace \
   --workspace-id "$GRAFANA_WORKSPACE_ID"
 ```
 
-Kiểm tra CloudWatch metric có dữ liệu trước khi debug Grafana:
+Check CloudWatch metric has data before debugging Grafana:
 
 ```bash
 aws cloudwatch list-metrics \
@@ -70,15 +70,15 @@ aws cloudwatch list-metrics \
 ## Expected result
 
 - Grafana workspace active.
-- CloudWatch data source hoạt động đúng region.
-- Dashboard hiển thị ít nhất ECS CPU/memory hoặc ALB metrics.
+- CloudWatch data source works in the correct region.
+- Dashboard displays at least ECS CPU/memory or ALB metrics.
 
 ## Cleanup
 
-- Nếu học tiếp IaC: có thể chụp screenshot hoặc note dashboard rồi xóa workspace để giảm phí.
-- Nếu kết thúc toàn bộ demo: chuyển sang [step 15](15-cleanup-cost-control.md).
+- If continuing to IaC: can take screenshots or note the dashboard then delete the workspace to reduce costs.
+- If finishing the entire demo: move to [step 15](15-cleanup-cost-control.md).
 
-Xóa workspace:
+Delete workspace:
 
 ```bash
 aws grafana delete-workspace \
@@ -87,6 +87,6 @@ aws grafana delete-workspace \
 
 ## Troubleshooting
 
-- Không login được: kiểm tra authentication/IAM Identity Center user assignment.
-- Không thấy metric: kiểm tra region, namespace và resource còn đang chạy.
-- Data source lỗi permission: kiểm tra workspace role có quyền đọc CloudWatch.
+- Cannot login: check authentication/IAM Identity Center user assignment.
+- No metrics visible: check region, namespace, and that resources are still running.
+- Data source permission error: check workspace role has permission to read CloudWatch.

@@ -1,41 +1,41 @@
 # 01 - Complete Local Server Baseline
 
-## Mục tiêu
+## Objective
 
-Chạy server hoàn chỉnh trong `./server` và hiểu các endpoint trước khi đưa lên AWS. Bước này vẫn cần thiết vì nó tạo baseline để phân biệt app health với database health khi debug các bước sau.
+Run the complete server in `./server` and understand the endpoints before moving to AWS. This step is still necessary because it establishes a baseline to distinguish app health from database health when debugging later steps.
 
 ## Prerequisites
 
-- Đã clone repo và đang đứng ở root folder `learn-devops`.
-- Máy local có Node.js 18+ và npm.
-- Chạy `npm ci` trong `./server` nếu chưa cài dependency.
-- Không phụ thuộc resource AWS từ step 00. Tuy vậy nên hoàn thành [step 00](00-prerequisites.md) trước khi bắt đầu các step AWS.
+- Repo cloned and standing at the root folder `learn-devops`.
+- Local machine has Node.js 18+ and npm.
+- Run `npm ci` in `./server` if dependencies are not yet installed.
+- No dependency on AWS resources from step 00. However, complete [step 00](00-prerequisites.md) before starting AWS steps.
 
-## Kiến thức cần hiểu
+## Knowledge to understand
 
-- Server đã hoàn chỉnh trước khi bắt đầu demo; các bước sau không yêu cầu sửa source code.
-- `/health` phù hợp làm health check cho ALB/ECS.
-- `/flow` giúp học request path.
-- `/api/demo-order` mô phỏng RDS/Redis/EFS để học dependency failure.
-- `/api/db/health` và `/api/orders` gọi PostgreSQL thật khi database đã được cấu hình.
-- `/test-error` tạo HTTP 500 có kiểm soát để demo logs, metrics và alarm mà không làm process chết.
-- App process vẫn chạy khi PostgreSQL chưa sẵn sàng.
+- The server is already complete before starting the demo; later steps do not require modifying source code.
+- `/health` is suitable as a health check for ALB/ECS.
+- `/flow` helps learn the request path.
+- `/api/demo-order` simulates RDS/Redis/EFS to learn dependency failure.
+- `/api/db/health` and `/api/orders` call real PostgreSQL when the database is configured.
+- `/test-error` produces a controlled HTTP 500 to demo logs, metrics, and alarms without crashing the process.
+- The app process continues running when PostgreSQL is not yet available.
 
-## Chi phí ước lượng
+## Estimated cost
 
-Miễn phí. Bước này chỉ chạy local.
+Free. This step only runs locally.
 
-## Cảnh báo service tốn tiền
+## Cost warning for paid services
 
-Không tạo AWS resource ở bước này.
+No AWS resources are created at this step.
 
-## Các bước làm bằng Console
+## Console steps
 
-Không dùng AWS Console trong bước này.
+No AWS Console used in this step.
 
-## Lệnh CLI kiểm tra/debug
+## CLI check/debug commands
 
-Từ root repo:
+From the repo root:
 
 ```bash
 cd server
@@ -44,7 +44,7 @@ npm run check
 node app.js
 ```
 
-Mở terminal khác:
+Open another terminal:
 
 ```bash
 curl -i http://localhost:3000/
@@ -55,7 +55,7 @@ curl -i http://localhost:3000/test-error
 curl -i http://localhost:3000/api/db/health
 ```
 
-Mô phỏng request đi qua ALB HTTPS:
+Simulate request going through ALB HTTPS:
 
 ```bash
 curl -i \
@@ -67,13 +67,13 @@ curl -i \
   http://localhost:3000/flow
 ```
 
-Sau khi dừng server cũ bằng `Ctrl+C`, mô phỏng dependency failure:
+After stopping the old server with `Ctrl+C`, simulate dependency failure:
 
 ```bash
 DEMO_RDS_STATUS=down node app.js
 ```
 
-Từ terminal khác:
+From another terminal:
 
 ```bash
 curl -i http://localhost:3000/api/demo-order
@@ -81,21 +81,21 @@ curl -i http://localhost:3000/api/demo-order
 
 ## Expected result
 
-- `/health` trả HTTP 200.
-- `/flow` trả JSON mô tả DNS/TLS/ALB/ECS.
-- `/api/demo-order` trả `status: ok` khi dependency env là `ok`.
-- `/test-error` trả HTTP 500 có chủ đích và server vẫn tiếp tục chạy.
-- `/api/db/health` trả HTTP 503 ở bước này vì chưa chạy PostgreSQL. Đây là kết quả mong đợi.
-- Khi `DEMO_RDS_STATUS=down`, `/api/demo-order` trả HTTP 503.
+- `/health` returns HTTP 200.
+- `/flow` returns JSON describing DNS/TLS/ALB/ECS.
+- `/api/demo-order` returns `status: ok` when dependency env is `ok`.
+- `/test-error` returns an intentional HTTP 500 and the server continues running.
+- `/api/db/health` returns HTTP 503 at this step because PostgreSQL is not running yet. This is expected.
+- When `DEMO_RDS_STATUS=down`, `/api/demo-order` returns HTTP 503.
 
 ## Cleanup
 
-- Nếu học tiếp step 02: dừng server bằng `Ctrl+C`, sau đó chạy lại app với `DATABASE_URL` theo hướng dẫn ở step 02.
-- Nếu dừng tại đây: dừng server bằng `Ctrl+C`.
+- If continuing to step 02: stop the server with `Ctrl+C`, then restart the app with `DATABASE_URL` as instructed in step 02.
+- If stopping here: stop the server with `Ctrl+C`.
 
 ## Troubleshooting
 
-- Port 3000 bị dùng: chạy `PORT=3001 node app.js`.
-- `node: command not found`: cài Node.js 18+.
-- `Cannot find module 'pg'`: chạy `npm ci` trong `./server`.
-- Curl không kết nối được: kiểm tra server còn chạy không.
+- Port 3000 in use: run `PORT=3001 node app.js`.
+- `node: command not found`: install Node.js 18+.
+- `Cannot find module 'pg'`: run `npm ci` in `./server`.
+- Curl cannot connect: check if the server is still running.

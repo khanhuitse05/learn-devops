@@ -1,87 +1,87 @@
 # 15 - Cleanup And Cost Control
 
-## Mục tiêu
+## Objective
 
-Xóa toàn bộ resource demo để ngừng phát sinh chi phí, sau đó kiểm tra Billing.
+Delete all demo resources to stop incurring costs, then check Billing.
 
 ## Prerequisites
 
-- Chỉ chạy step này khi muốn kết thúc demo hoặc dừng học đủ lâu để cần ngừng chi phí.
-- AWS CLI đăng nhập đúng account và region đã dùng cho lab.
-- Không cần tạo lại resource đã cleanup ở các step trước. Resource nào còn tồn tại thì xóa theo checklist bên dưới.
-- Xác nhận không có resource production hoặc resource ngoài lab dùng prefix `learn-devops-demo`.
+- Only run this step when you want to end the demo or pause long enough to need to stop costs.
+- AWS CLI logged into the correct account and region used for the lab.
+- No need to recreate resources already cleaned up in earlier steps. Delete any remaining resources per the checklist below.
+- Confirm no production resources or non-lab resources use the `learn-devops-demo` prefix.
 
-## Kiến thức cần hiểu
+## Knowledge to understand
 
-- Một số resource phụ thuộc nhau nên phải xóa theo thứ tự.
-- RDS, ALB, NAT Gateway, Fargate, ElastiCache và Amazon Managed Grafana là các nguồn chi phí chính trong lab này.
-- ECR, ElastiCache, Amazon Managed Grafana, CloudWatch Logs, snapshots, Elastic IP cũng có thể còn chi phí nếu quên.
+- Some resources depend on each other so they must be deleted in order.
+- RDS, ALB, NAT Gateway, Fargate, ElastiCache, and Amazon Managed Grafana are the main cost sources in this lab.
+- ECR, ElastiCache, Amazon Managed Grafana, CloudWatch Logs, snapshots, Elastic IP can also still incur costs if forgotten.
 
-## Chi phí ước lượng
+## Estimated cost
 
-Bước cleanup giúp giảm chi phí. Sau cleanup, vẫn kiểm tra Billing vì cost explorer có thể delay vài giờ đến hơn một ngày.
+The cleanup step helps reduce costs. After cleanup, still check Billing because cost explorer can be delayed by a few hours to over a day.
 
-## Cảnh báo service tốn tiền
+## Cost warning for paid services
 
-Ưu tiên kiểm tra và xóa:
+Prioritize checking and deleting:
 
 - NAT Gateway.
-- RDS instance và snapshot không cần giữ.
+- RDS instance and snapshots not needed.
 - ALB.
-- ECS services đang desired count > 0.
+- ECS services with desired count > 0.
 - ECR images.
 - ElastiCache Redis cluster/subnet group.
 - Amazon Managed Grafana workspace.
 - CloudWatch log groups.
-- Elastic IP unattached.
+- Unattached Elastic IPs.
 
-## Các bước làm bằng Console
+## Console steps
 
-Đây là checklist cleanup tổng hợp cho các resource đã tạo từ step 00 đến step 14. Xóa theo thứ tự:
+This is a consolidated cleanup checklist for resources created from step 00 to step 14. Delete in order:
 
-1. ECS: set desired count về `0`, delete service, deregister task definition revision nếu không dùng và delete cluster.
+1. ECS: set desired count to `0`, delete service, deregister task definition revisions if not in use, and delete cluster.
 2. EC2 Load Balancers: delete ALB.
 3. Target Groups: delete target group.
-4. RDS: delete DB instance, bỏ final snapshot nếu không cần giữ data. Chờ DB bị xóa hoàn toàn trước khi cleanup VPC.
-5. RDS: delete DB subnet group nếu đã tạo riêng cho lab.
-6. ECR: delete repository và image.
-7. ElastiCache: delete Redis cluster/cache, subnet group và security group rule liên quan.
-8. Amazon Managed Grafana: delete workspace demo.
-9. CloudFormation: delete stack demo nếu còn.
-10. Terraform: chạy `terraform destroy` trong workspace lab nếu đã apply.
-11. Systems Manager Parameter Store: delete `/learn-devops-demo/db-url` nếu đã tạo.
-12. Secrets Manager: delete `learn-devops-demo/db-url` nếu đã tạo.
-13. CloudWatch: delete dashboard, log group và alarm demo.
-14. IAM: gỡ policy demo khỏi ECS execution role; xóa role nếu role được tạo riêng cho lab và không còn resource nào dùng.
+4. RDS: delete DB instance, skip final snapshot if you don't need to keep data. Wait for the DB to be fully deleted before cleaning up VPC.
+5. RDS: delete DB subnet group if created specifically for the lab.
+6. ECR: delete repository and images.
+7. ElastiCache: delete Redis cluster/cache, subnet group, and related security group rules.
+8. Amazon Managed Grafana: delete demo workspace.
+9. CloudFormation: delete demo stack if still exists.
+10. Terraform: run `terraform destroy` in the lab workspace if applied.
+11. Systems Manager Parameter Store: delete `/learn-devops-demo/db-url` if created.
+12. Secrets Manager: delete `learn-devops-demo/db-url` if created.
+13. CloudWatch: delete demo dashboard, log group, and alarm.
+14. IAM: detach demo policy from ECS execution role; delete role if the role was created specifically for the lab and no other resources use it.
 15. VPC:
-   - Delete NAT Gateway nếu có.
-   - Release Elastic IP nếu có.
-   - Delete security groups.
-   - Delete subnets.
-   - Detach/delete Internet Gateway.
-   - Delete VPC.
-16. Local Docker: chạy `docker compose down -v` trong `./server` nếu không cần giữ PostgreSQL local.
-17. Billing: kiểm tra Free Tier, Bills, Cost Explorer.
+    - Delete NAT Gateway if exists.
+    - Release Elastic IP if exists.
+    - Delete security groups.
+    - Delete subnets.
+    - Detach/delete Internet Gateway.
+    - Delete VPC.
+16. Local Docker: run `docker compose down -v` in `./server` if you no longer need local PostgreSQL.
+17. Billing: check Free Tier, Bills, Cost Explorer.
 
-Budget alarm từ step 00 có thể giữ lại để tiếp tục bảo vệ account.
+The budget alarm from step 00 can be kept to continue protecting the account.
 
-## Lệnh CLI kiểm tra/debug
+## CLI check/debug commands
 
-Đảm bảo `AWS_REGION` giống region đã dùng trong các step trước. Ví dụ, Singapore là `ap-southeast-1`:
+Ensure `AWS_REGION` matches the region used in previous steps. For example, Singapore is `ap-southeast-1`:
 
 ```bash
 AWS_REGION=ap-southeast-1
 export AWS_DEFAULT_REGION="$AWS_REGION"
 ```
 
-Tìm ECS services:
+Find ECS services:
 
 ```bash
 aws ecs list-clusters
 aws ecs list-services --cluster learn-devops-demo-cluster
 ```
 
-Tìm ALB:
+Find ALB:
 
 ```bash
 aws elbv2 describe-load-balancers \
@@ -89,7 +89,7 @@ aws elbv2 describe-load-balancers \
   --output table
 ```
 
-Tìm target group:
+Find target group:
 
 ```bash
 aws elbv2 describe-target-groups \
@@ -97,7 +97,7 @@ aws elbv2 describe-target-groups \
   --output table
 ```
 
-Tìm RDS:
+Find RDS:
 
 ```bash
 aws rds describe-db-instances \
@@ -105,7 +105,7 @@ aws rds describe-db-instances \
   --output table
 ```
 
-Tìm ECR:
+Find ECR:
 
 ```bash
 aws ecr describe-repositories \
@@ -113,7 +113,7 @@ aws ecr describe-repositories \
   --output table
 ```
 
-Tìm ElastiCache Redis:
+Find ElastiCache Redis:
 
 ```bash
 aws elasticache describe-cache-clusters \
@@ -121,7 +121,7 @@ aws elasticache describe-cache-clusters \
   --output table
 ```
 
-Tìm Amazon Managed Grafana workspace:
+Find Amazon Managed Grafana workspace:
 
 ```bash
 aws grafana list-workspaces \
@@ -129,7 +129,7 @@ aws grafana list-workspaces \
   --output table
 ```
 
-Tìm CloudFormation stack:
+Find CloudFormation stack:
 
 ```bash
 aws cloudformation list-stacks \
@@ -138,7 +138,7 @@ aws cloudformation list-stacks \
   --output table
 ```
 
-Tìm SSM parameter:
+Find SSM parameter:
 
 ```bash
 aws ssm describe-parameters \
@@ -147,7 +147,7 @@ aws ssm describe-parameters \
   --output table
 ```
 
-Tìm Secrets Manager secret:
+Find Secrets Manager secret:
 
 ```bash
 aws secretsmanager list-secrets \
@@ -155,7 +155,7 @@ aws secretsmanager list-secrets \
   --output table
 ```
 
-Tìm NAT Gateway:
+Find NAT Gateway:
 
 ```bash
 aws ec2 describe-nat-gateways \
@@ -164,7 +164,7 @@ aws ec2 describe-nat-gateways \
   --output table
 ```
 
-Tìm Elastic IP không attach:
+Find unattached Elastic IP:
 
 ```bash
 aws ec2 describe-addresses \
@@ -172,7 +172,7 @@ aws ec2 describe-addresses \
   --output table
 ```
 
-Tìm log groups:
+Find log groups:
 
 ```bash
 aws logs describe-log-groups \
@@ -181,7 +181,7 @@ aws logs describe-log-groups \
   --output table
 ```
 
-Tìm CloudWatch alarm:
+Find CloudWatch alarm:
 
 ```bash
 aws cloudwatch describe-alarms \
@@ -190,7 +190,7 @@ aws cloudwatch describe-alarms \
   --output table
 ```
 
-Tìm CloudWatch dashboard:
+Find CloudWatch dashboard:
 
 ```bash
 aws cloudwatch list-dashboards \
@@ -201,28 +201,28 @@ aws cloudwatch list-dashboards \
 
 ## Expected result
 
-- Không còn ECS service chạy.
-- Không còn ALB demo.
-- Không còn RDS demo nếu không muốn giữ DB.
-- Không còn ECR repository và image demo.
-- Không còn ElastiCache Redis demo.
-- Không còn Amazon Managed Grafana workspace demo.
-- Không còn CloudFormation stack demo.
-- Không còn Terraform-managed resource demo.
-- Không còn SSM parameter hoặc Secrets Manager secret demo.
-- Không còn CloudWatch dashboard, log group và alarm demo.
-- Không còn NAT Gateway demo.
-- Không còn Elastic IP không sử dụng.
-- Không còn VPC demo sau khi đã xóa hết dependency.
-- Billing không tiếp tục tăng bất thường trong các ngày sau.
+- No ECS service running.
+- No demo ALB.
+- No demo RDS if you don't want to keep the DB.
+- No demo ECR repository and images.
+- No demo ElastiCache Redis.
+- No demo Amazon Managed Grafana workspace.
+- No demo CloudFormation stack.
+- No demo Terraform-managed resources.
+- No demo SSM parameter or Secrets Manager secret.
+- No demo CloudWatch dashboard, log group, and alarm.
+- No demo NAT Gateway.
+- No unused Elastic IPs.
+- No demo VPC after all dependencies are deleted.
+- Billing does not continue to increase abnormally in the following days.
 
 ## Cleanup
 
-Đây là bước cleanup chính. Sau khi làm xong, giữ lại file note hoặc screenshot nếu muốn ghi log học tập.
+This is the main cleanup step. After completing, keep note files or screenshots if you want to log your learning.
 
 ## Troubleshooting
 
-- VPC không xóa được: còn ENI từ ALB/ECS/RDS hoặc NAT Gateway chưa xóa xong.
-- Security Group không xóa được: còn resource attach hoặc SG khác reference nó.
-- RDS delete lâu: chờ status chuyển `deleting`, có thể mất nhiều phút.
-- Cost vẫn hiện: Billing thường delay, kiểm tra lại sau vài giờ hoặc ngày tiếp theo.
+- VPC cannot be deleted: ENIs from ALB/ECS/RDS still exist or NAT Gateway not yet fully deleted.
+- Security Group cannot be deleted: resource still attached or another SG references it.
+- RDS delete takes long: wait for status to change to `deleting`, it can take many minutes.
+- Cost still shows: Billing is often delayed, check again after a few hours or the next day.

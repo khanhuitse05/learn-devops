@@ -1,45 +1,45 @@
 # 13 - CloudFormation
 
-## Mục tiêu
+## Objective
 
-Học Infrastructure as Code native của AWS bằng CloudFormation: viết template nhỏ, deploy stack, update stack và delete stack.
+Learn AWS-native Infrastructure as Code with CloudFormation: write a small template, deploy a stack, update a stack, and delete a stack.
 
 ## Prerequisites
 
-- Đã hoàn thành [step 00](00-prerequisites.md): AWS CLI chạy đúng account/region.
-- Nên đã đi qua các step manual trước để hiểu resource trước khi viết IaC.
-- Tạo resource nhỏ, rẻ và dễ xóa cho lab đầu tiên.
+- Completed [step 00](00-prerequisites.md): AWS CLI running on the correct account/region.
+- Should have gone through the earlier manual steps to understand resources before writing IaC.
+- Create small, cheap, and easy-to-delete resources for the first lab.
 
-## Kiến thức cần hiểu
+## Knowledge to understand
 
-- Template mô tả desired state của resource AWS.
-- Stack là đơn vị deploy/update/delete.
-- Parameters, Outputs và Tags giúp template reusable và dễ cleanup.
-- CloudFormation tốt để học AWS-native dependency và rollback.
+- Template describes the desired state of AWS resources.
+- Stack is the unit of deploy/update/delete.
+- Parameters, Outputs, and Tags help make templates reusable and easy to clean up.
+- CloudFormation is good for learning AWS-native dependencies and rollback.
 
-## Chi phí ước lượng
+## Estimated cost
 
-CloudFormation không tính phí riêng cho stack cơ bản, nhưng resource được stack tạo vẫn tính phí. Lab đầu nên tạo resource miễn phí hoặc rất rẻ như SSM Parameter.
+CloudFormation does not charge separately for basic stacks, but resources created by the stack still incur charges. The first lab should create free or very cheap resources like SSM Parameters.
 
-## Cảnh báo service tốn tiền
+## Cost warning for paid services
 
-Không bắt đầu bằng RDS/ECS/ALB trong CloudFormation nếu chưa tự tin delete stack. Dùng resource nhỏ trước.
+Don't start with RDS/ECS/ALB in CloudFormation if not yet confident in deleting stacks. Use small resources first.
 
-## Các bước làm bằng Console
+## Console steps
 
-1. Vào CloudFormation.
+1. Go to CloudFormation.
 2. Create stack.
-3. Upload template hoặc dùng template editor.
-4. Tạo stack name: `learn-devops-demo-cfn`.
-5. Dùng parameter prefix `learn-devops-demo`.
-6. Review resource sẽ tạo trước khi submit.
-7. Chờ stack status `CREATE_COMPLETE`.
-8. Update stack để đổi một tag/value nhỏ.
-9. Delete stack sau khi xem xong.
+3. Upload template or use the template editor.
+4. Create stack name: `learn-devops-demo-cfn`.
+5. Use parameter prefix `learn-devops-demo`.
+6. Review resources to be created before submitting.
+7. Wait for stack status `CREATE_COMPLETE`.
+8. Update stack to change a small tag/value.
+9. Delete stack after reviewing.
 
-## Lệnh CLI kiểm tra/debug
+## CLI check/debug commands
 
-Ví dụ template nhỏ tạo SSM parameter:
+Example small template creating an SSM parameter:
 
 ```bash
 cat > /tmp/learn-devops-demo-cfn.yml <<'YAML'
@@ -82,17 +82,17 @@ aws cloudformation delete-stack \
 
 ## Expected result
 
-- Stack deploy thành công.
-- Biết xem Events, Resources và Outputs.
-- Biết update/delete stack và hiểu rollback cơ bản.
+- Stack deployed successfully.
+- Know how to view Events, Resources, and Outputs.
+- Know how to update/delete stacks and understand basic rollback.
 
 ## Cleanup
 
-- Delete stack sau lab.
-- Nếu kết thúc toàn bộ demo: chuyển sang [step 15](15-cleanup-cost-control.md).
+- Delete stack after the lab.
+- If finishing the entire demo: move to [step 15](15-cleanup-cost-control.md).
 
 ## Troubleshooting
 
-- Stack rollback: mở tab Events để xem resource lỗi đầu tiên.
-- Delete stack kẹt: resource có dependency hoặc deletion protection.
-- Name đã tồn tại: xóa stack cũ hoặc đổi resource name có prefix demo.
+- Stack rollback: open the Events tab to see the first failing resource.
+- Delete stack stuck: resource has a dependency or deletion protection.
+- Name already exists: delete the old stack or change the resource name with the demo prefix.
