@@ -68,6 +68,8 @@ Nếu bạn đóng gói app bằng Docker, cần một "bộ não" để quyết
 
 **Không cần** patch OS, không cần quản lý server, không cần lo capacity planning.
 
+**Phù hớp** Web server, API dài, WebSocket, background job.
+
 ---
 
 ### Nhóm 4: Serverless Function (FaaS)
@@ -80,38 +82,7 @@ Nếu bạn đóng gói app bằng Docker, cần một "bộ não" để quyết
 - Ổ đĩa tạm (/tmp): tối đa 10GB
 - **Cold Start**: Request đầu tiên sau một thời gian không dùng sẽ bị delay (vài trăm ms đến vài giây) do AWS cần khởi động môi trường thực thi
 
-**Cold Start là gì và cách giảm thiểu?**
-
-Khi Lambda function không được gọi trong ~5-15 phút, AWS "đóng băng" môi trường. Request tiếp theo sẽ mất thêm thời gian để khởi tạo lại. So sánh mức độ ảnh hưởng:
-
-| Runtime     | Cold Start điển hình | Giải pháp giảm thiểu                           |
-|-------------|----------------------|------------------------------------------------|
-| Node.js     | ~200-500ms           | Nhẹ nhất, dùng Provisioned Concurrency nếu cần  |
-| Python      | ~300-600ms           | Tối ưu import, giảm dependencies                |
-| Go          | ~100-300ms           | Compile ra binary nhẹ                           |
-| Java        | ~1-5 giây            | Dùng GraalVM native image, SnapStart            |
-| .NET        | ~1-4 giây            | Dùng .NET 8 native AOT                          |
-
-**Cách giảm Cold Start:**
-- **Provisioned Concurrency**: Giữ sẵn N instance "ấm" luôn sẵn sàng (tốn thêm phí)
-- **Lambda SnapStart (Java)**: Chụp snapshot môi trường đã init, khởi động nhanh hơn
-- **Giảm package size**: Dùng layer, tree-shaking, tránh import thư viện không cần
-- **Dùng Lambda container image nhỏ**: Dùng AWS base image tối ưu thay vì image nặng
-
----
-
-## 3. So sánh Lambda vs Fargate – Khi nào dùng cái nào?
-
-| Tiêu chí               | Lambda                                   | Fargate                                      |
-|-------------------------|------------------------------------------|----------------------------------------------|
-| Đơn vị                  | Function (code)                          | Container (Docker image)                     |
-| Thời gian chạy tối đa   | 15 phút                                  | Không giới hạn (long-running)                |
-| RAM tối đa              | 10 GB                                    | 120 GB                                       |
-| CPU tối đa              | Tỉ lệ với RAM (tối đa 6 vCPU)            | 16 vCPU                                      |
-| Cold Start              | Có (có thể giảm)                          | Có nhưng nhẹ hơn (~30-60s để provision)       |
-| Chi phí khi idle        | $0                                       | $0 (nhưng phải đợi spin-up lại)              |
-| Stateful                | Không (stateless)                        | Không (container tự hủy sau khi dừng)         |
-| Phù hợp nhất            | Event-driven, API ngắn, cron, xử lý file | Web server, API dài, WebSocket, background job |
+**Phù hợp nhất** Event-driven, API ngắn, cron, xử lý file 
 
 ---
 

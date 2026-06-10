@@ -126,18 +126,6 @@ DynamoDB là NoSQL key-value/document database serverless của AWS. Không cầ
 | Point-in-Time Recovery   | Restore về bất kỳ thời điểm nào trong 35 ngày                             |
 | Transactions             | ACID transaction cho nhiều items (có giới hạn)                            |
 
-### So sánh Aurora vs DynamoDB
-
-| Tiêu chí              | Aurora (PostgreSQL/MySQL)             | DynamoDB                               |
-|-----------------------|----------------------------------------|----------------------------------------|
-| Data model            | Bảng có schema cố định, JOIN, foreign key | Key-value/document, schema linh hoạt   |
-| Query language        | SQL                                    | API (GetItem, Query, Scan)             |
-| JOIN                  | Hỗ trợ mạnh                            | Không (phải tự join ở app)             |
-| Transaction           | ACID đầy đủ                            | ACID có giới hạn (transaction item limit)|
-| Scaling               | Vertical + tối đa 15 replica           | Horizontal auto, không giới hạn        |
-| Cost khi idle         | Có (server chạy 24/7, trừ Serverless)   | $0 (On-Demand chỉ tính khi dùng)       |
-| Use case              | App cần query phức tạp, JOIN, reporting| App scale lớn, schema linh hoạt, mobile |
-
 ---
 
 ## 5. ElastiCache – In-Memory Cache

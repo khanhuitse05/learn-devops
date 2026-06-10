@@ -23,17 +23,16 @@ S3 là object storage với độ bền **99.999999999% (11 số 9)**. Bạn lư
 
 ### S3 Storage Classes – Chọn class phù hợp với tần suất truy cập
 
-| Storage Class              | Độ bền    | Use case                                           | Chi phí lưu trữ (tương đối) | Phí retrieval         |
-|----------------------------|-----------|----------------------------------------------------|------------------------------|-----------------------|
-| S3 Standard                 | 11 số 9   | Truy cập thường xuyên, production                  | $$                           | Không                 |
-| S3 Intelligent-Tiering      | 11 số 9   | Không biết pattern truy cập, auto move giữa tier    | $$ (phí monitoring nhỏ)      | Không                 |
-| S3 Standard-IA (Infrequent) | 11 số 9   | Truy cập ít (<1 lần/tháng) nhưng cần lấy nhanh      | $                            | Có (per GB)           |
-| S3 One Zone-IA              | 11 số 9 * | Như IA nhưng chỉ 1 AZ (rẻ hơn, kém bền hơn)         | $ (rẻ hơn IA 20%)            | Có (per GB)           |
-| S3 Glacier Instant Retrieval| 11 số 9   | Archive truy cập ~1 lần/quý, cần lấy trong mili giây| $                            | Có                     |
-| S3 Glacier Flexible Retrieval| 11 số 9  | Archive lấy lại trong vài phút đến vài giờ          | Rất rẻ                       | Có (cao hơn)          |
-| S3 Glacier Deep Archive     | 11 số 9   | Archive tối thượng, lấy lại trong 12-48 giờ         | Rẻ nhất                      | Có (cao nhất)         |
+| Storage Class              | Use case                                           | Chi phí lưu trữ (tương đối) | Phí retrieval         |
+|----------------------------|----------------------------------------------------|------------------------------|-----------------------|
+| S3 Standard                 | Truy cập thường xuyên, production                  | $$                           | Không                 |
+| S3 Intelligent-Tiering      | Không biết pattern truy cập, auto move giữa tier    | $$ (phí monitoring nhỏ)      | Không                 |
+| S3 Standard-IA (Infrequent) | Truy cập ít (<1 lần/tháng) nhưng cần lấy nhanh      | $                            | Có (per GB)           |
+| S3 One Zone-IA              | Như IA nhưng chỉ 1 AZ (rẻ hơn, kém bền hơn)         | $ (rẻ hơn IA 20%)            | Có (per GB)           |
+| S3 Glacier Instant Retrieval| Archive truy cập ~1 lần/quý, cần lấy trong mili giây| $                            | Có                     |
+| S3 Glacier Flexible Retrieval | Archive lấy lại trong vài phút đến vài giờ          | Rất rẻ                       | Có (cao hơn)          |
+| S3 Glacier Deep Archive     | Archive tối thượng, lấy lại trong 12-48 giờ         | Rẻ nhất                      | Có (cao nhất)         |
 
-> \* One Zone-IA không chịu được mất cả AZ.
 
 ### S3 Lifecycle Rules
 Tự động chuyển object giữa các storage class hoặc xóa theo thời gian:

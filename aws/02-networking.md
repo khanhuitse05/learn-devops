@@ -13,7 +13,7 @@ VPC là một network ảo riêng biệt của bạn trong AWS. Bạn định ng
 
 | Thành phần          | Vai trò                                                                |
 |---------------------|------------------------------------------------------------------------|
-| CIDR Block           | Dải IP của VPC, vd: `10.0.0.0/16` (65,536 IP)                         |
+| CIDR Block           | (Classless Inter-Domain Routing) Dải IP của VPC, vd: `10.0.0.0/16` (65,536 IP)                         |
 | Subnet               | Chia nhỏ VPC thành các mạng con. Mỗi subnet nằm trong 1 Availability Zone |
 | Public Subnet        | Subnet có route ra Internet Gateway → tài nguyên có thể truy cập internet |
 | Private Subnet       | Subnet không có route trực tiếp ra internet → bảo mật cho database, backend |
