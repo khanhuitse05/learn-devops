@@ -47,13 +47,13 @@ This is a consolidated cleanup checklist for resources created from step 00 to s
 6. ECR: delete repository and images.
 7. ElastiCache: delete Redis cluster/cache, subnet group, and related security group rules.
 8. Amazon Managed Grafana: delete demo workspace.
-9. CloudFormation: delete demo stack if still exists.
-10. Terraform: run `terraform destroy` in the lab workspace if applied.
-11. Systems Manager Parameter Store: delete `/learn-devops-demo/db-url` if created.
-12. Secrets Manager: delete `learn-devops-demo/db-url` if created.
-13. CloudWatch: delete demo dashboard, log group, and alarm.
-14. IAM: detach demo policy from ECS execution role; delete role if the role was created specifically for the lab and no other resources use it.
-15. VPC:
+9. Systems Manager Parameter Store: delete `/learn-devops-demo/db-url` if created.
+10. Secrets Manager: delete `learn-devops-demo/db-url` if created.
+11. CloudWatch: delete demo dashboard, log group, and alarm.
+12. IAM: detach demo policy from ECS execution role; delete role if the role was created specifically for the lab and no other resources use it. (btw IAM roles and IAM permissions/policies do not have direct cost. You clean them up mostly for security and tidiness, not billing.)
+  - Roles: ecsTaskExecutionRole
+  - Permissions: ReadLearnDevopsDemoDbUrl
+13. VPC:
     - Delete NAT Gateway if exists.
     - Release Elastic IP if exists.
     - Delete security groups.
