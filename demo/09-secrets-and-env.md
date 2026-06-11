@@ -48,7 +48,7 @@ Cost-saving option with SSM via the Create parameter screen:
 
 9. Tags: leave empty if just doing the lab.
 10. Click `Create parameter`.
-11. Go to IAM, add parameter read permission for the ECS task execution role:
+11. Add parameter read permission for the ECS task execution role:
     - Open the current ECS task definition revision.
     - In the Overview section, find `Task execution role`.
     - Click the role `ecsTaskExecutionRole` to open the IAM role.
@@ -72,12 +72,17 @@ Cost-saving option with SSM via the Create parameter screen:
       }
       ```
 
-    - Change `ACCOUNT_ID` to your AWS account ID.
+    - Change `ACCOUNT_ID` to your AWS account ID. (can check on top-right screen)
     - Click Next.
     - Policy name: `ReadLearnDevopsDemoDbUrl`.
     - Click Create policy.
 12. Update the ECS task definition to inject the secret into the env var `DATABASE_URL`.
+  - Click Create new revision.
+  - Find Environment variables -> Add Env variable.
+  - Name: DATABASE_URL; Value type: ValueFrom / Secret; Value: /learn-devops-demo/db-url.
 13. Deploy the new revision.
+  - Goto ECS -> Clusters, then select your service (`learn-devops-demo-node-service`)
+  - Click Update service then select lasted reversion
 
 Note: `String` matches the screenshot but the value is not encrypted. If you want more security, select `SecureString` instead of `String`; the remaining steps stay the same.
 
@@ -92,15 +97,6 @@ Secrets Manager option:
 
 ## CLI check/debug commands
 
-Create SSM parameter as `String` matching the screenshot:
-
-```bash
-aws ssm put-parameter \
-  --name /learn-devops-demo/db-url \
-  --type String \
-  --value "postgres://devops_demo:YOUR_PASSWORD@YOUR_RDS_ENDPOINT:5432/devops_demo?sslmode=require" \
-  --overwrite
-```
 
 Read parameter to check local permissions:
 
