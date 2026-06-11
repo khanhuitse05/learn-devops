@@ -19,18 +19,6 @@ Run the app and PostgreSQL using Docker Compose to simulate how an ECS task conn
 - Volume keeps PostgreSQL data between restarts.
 - `server/compose.yml` already contains full config; no need to modify code or create files during the lab.
 
-## Estimated cost
-
-Free locally.
-
-## Cost warning for paid services
-
-No AWS used in this step.
-
-## Console steps
-
-No AWS Console used in this step.
-
 ## Files already available
 
 - `server/compose.yml`: runs app and PostgreSQL.
@@ -100,8 +88,7 @@ nc -vz postgres 5432
 
 ## Cleanup
 
-- If continuing to step 04: stop the local stack. Later AWS steps do not use local containers.
-- If stopping here: stop the local stack to free CPU, RAM, and ports.
+- Stop the local stack. Later AWS steps do not use local containers.
 
 ```bash
 cd server

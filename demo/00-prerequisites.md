@@ -10,7 +10,7 @@ Prepare a safe AWS account before creating any resources. After this step you wi
 - Use the resource prefix `learn-devops-demo-*` for easy cleanup.
 - Do not publicly expose database or cache.
 - Later labs may create paid resources: RDS, Fargate, ALB, ElastiCache, Grafana, CloudWatch, and Secrets Manager.
-- After each practice session, finish with [15 - Cleanup And Cost Control](15-cleanup-cost-control.md).
+- After each practice session, finish with [13 - Cleanup And Cost Control](13-cleanup-cost-control.md).
 
 ## Prerequisites
 
@@ -73,8 +73,7 @@ aws ec2 describe-availability-zones \
 
 ## Cleanup
 
-- If continuing: keep the budget to protect the account in later labs.
-- If stopping here: still keep the budget. Budget does not create continuously running AWS resources.
+- Keep the budget to protect the account in later labs.
 
 ## Troubleshooting
 

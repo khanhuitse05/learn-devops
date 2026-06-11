@@ -50,17 +50,11 @@ Create cluster:
 3. Under **Cluster configuration**:
    - Cluster name: `learn-devops-demo-cluster`.
    - **Service Connect defaults - optional**: leave empty.
-4. Under **Infrastructure - advanced**:
+4. Under **Infrastructure**:
    - Select **Fargate only**.
-   - Do not select additional Amazon EC2 instances.
-5. Under **Monitoring - optional**:
-   - **Container Insights**: select **Turned off** to save costs for the lab.
-   - **ECS Exec encryption and logging**: keep **Default**.
-   - **KMS Key ID for ECS Exec session**: leave empty.
-6. Under **Encryption - optional**:
-   - **Managed storage**: leave empty, use the default AWS managed key.
-   - **Fargate ephemeral storage**: leave empty, use the default AWS managed key.
-7. Under **Tags - optional**: no need to add tags for this lab.
+5. Under **Monitoring - optional** 
+6. Under **Encryption - optional**
+7. Under **Tags - optional**.
 8. Select **Create**.
 
 After the cluster is created, create a task definition:
@@ -100,15 +94,14 @@ Create an ECS service to run the task continuously:
 
 1. Go to **Clusters** -> select `learn-devops-demo-cluster`.
 2. In the **Services** tab, select **Create**.
+   - Task definition family: `learn-devops-demo-node`.
+   - Revision: select the latest revision.
+   - Service name: `learn-devops-demo-node-service`.
 3. Under **Environment**:
    - Compute options: **Launch type**.
    - Launch type: **Fargate**.
    - Platform version: **Latest**.
 4. Under **Deployment configuration**:
-   - Application type: **Service**.
-   - Task definition family: `learn-devops-demo-node`.
-   - Revision: select the latest revision.
-   - Service name: `learn-devops-demo-node-service`.
    - Service type: **Replica**.
    - Desired tasks: `1`.
 5. Under **Networking**:

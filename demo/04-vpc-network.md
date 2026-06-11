@@ -7,9 +7,6 @@ Create a minimal network to prepare for RDS, ECS, and ALB. Prioritize cost savin
 ## Prerequisites
 
 - Completed [step 00](00-prerequisites.md): AWS CLI logged into the correct account and knowing the region used for the lab.
-- Stopped the local stack from [step 03](03-docker-compose-app-postgres.md) if no longer running locally.
-- No AWS resources from previous steps needed yet.
-- If a lab VPC was created previously, check before recreating to avoid duplicate resources.
 
 ## Knowledge to understand
 
@@ -37,23 +34,16 @@ NAT Gateway is an easy-to-forget resource that incurs costs. For a cost-saving l
 
 The `VPC and more` wizard will create the following resources in one go. No need to recreate manually:
 
-- VPC `learn-devops-demo-vpc`: `10.0.0.0/16`.
-- 2 public subnets:
-  - Public subnet A: `10.0.1.0/24`.
-  - Public subnet B: `10.0.2.0/24`.
-- 2 private subnets:
-  - Private subnet A: `10.0.11.0/24`.
-  - Private subnet B: `10.0.12.0/24`.
-- Internet Gateway attached to the VPC.
-- Public route table has route `0.0.0.0/0` to Internet Gateway and is associated with the 2 public subnets.
-- Private route table only has local route because this lab does not create a NAT Gateway.
+- VPC & More - Auto generate
+- Name Tag `learn-devops-demo-vpc`: IPv4 CIDR `10.0.0.0/16`.
+- 2 AZs: 2 public subnets, 2 private subnets
 
 The wizard auto-generates Name tags for subnets. Use CIDR to precisely identify each subnet. If desired, you can rename Name tags after creation:
 
-- `learn-devops-demo-public-a`: `10.0.1.0/24`.
-- `learn-devops-demo-public-b`: `10.0.2.0/24`.
-- `learn-devops-demo-private-a`: `10.0.11.0/24`.
-- `learn-devops-demo-private-b`: `10.0.12.0/24`.
+- `learn-devops-demo-public-a`: `10.0.1.0/20`.
+- `learn-devops-demo-public-b`: `10.0.2.0/20`.
+- `learn-devops-demo-private-a`: `10.0.11.0/20`.
+- `learn-devops-demo-private-b`: `10.0.12.0/20`.
 
 ### Part 2: Manually create Security Groups
 
@@ -70,11 +60,9 @@ Internet
 
 Create Security Groups in the exact order below, because Security Groups created later need to reference Security Groups created earlier.
 
-#### 2.1. Create Security Group for ALB
+Find `Create security group` button by Go to `VPC Console` → `Security groups`.
 
-1. Go to `VPC Console` → `Security groups`.
-2. Click `Create security group`.
-3. Fill in the `Basic details` section:
+#### 2.1. Create Security Group for ALB
 
 | Field | Value |
 | --- | --- |
@@ -95,10 +83,6 @@ Meaning: internet users are allowed to send HTTP requests to ALB.
 
 #### 2.2. Create Security Group for ECS task
 
-1. Go back to `Security groups`.
-2. Click `Create security group`.
-3. Fill in the `Basic details` section:
-
 | Field | Value |
 | --- | --- |
 | `Security group name` | `learn-devops-demo-ecs-sg` |
@@ -117,10 +101,6 @@ Meaning: internet users are allowed to send HTTP requests to ALB.
 Meaning: only ALB is allowed to send requests to the app running on the ECS task. Do not select `Anywhere-IPv4` for this rule.
 
 #### 2.3. Create Security Group for RDS PostgreSQL
-
-1. Go back to `Security groups`.
-2. Click `Create security group`.
-3. Fill in the `Basic details` section:
 
 | Field | Value |
 | --- | --- |

@@ -35,7 +35,7 @@ RDS incurs charges while the instance exists, even with no requests. Do not enab
 Follow the detailed guide: [Create RDS PostgreSQL using AWS Console](more/create-database-console.md).
 
 1. Go to RDS Console.
-2. Select Create database.
+2. Select Create database - Full configuration.
 3. Engine: PostgreSQL.
 4. Template: Free tier if available; otherwise, select Dev/Test with a small configuration.
 5. DB identifier: `learn-devops-demo-postgres`.

@@ -21,18 +21,6 @@ Run the complete server in `./server` and understand the endpoints before moving
 - `/test-error` produces a controlled HTTP 500 to demo logs, metrics, and alarms without crashing the process.
 - The app process continues running when PostgreSQL is not yet available.
 
-## Estimated cost
-
-Free. This step only runs locally.
-
-## Cost warning for paid services
-
-No AWS resources are created at this step.
-
-## Console steps
-
-No AWS Console used in this step.
-
 ## CLI check/debug commands
 
 From the repo root:
@@ -90,8 +78,7 @@ curl -i http://localhost:3000/api/demo-order
 
 ## Cleanup
 
-- If continuing to step 02: stop the server with `Ctrl+C`, then restart the app with `DATABASE_URL` as instructed in step 02.
-- If stopping here: stop the server with `Ctrl+C`.
+- Stop the server with `Ctrl+C`, then restart the app with `DATABASE_URL` as instructed in step 02.
 
 ## Troubleshooting
 

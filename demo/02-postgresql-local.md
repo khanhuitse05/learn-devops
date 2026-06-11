@@ -173,8 +173,7 @@ curl -i \
 
 ## Cleanup
 
-- If continuing to step 03: stop the app with `Ctrl+C`, then delete the manually created PostgreSQL container to avoid port conflicts with Docker Compose.
-- If stopping here: stop the app with `Ctrl+C` and delete the local PostgreSQL container.
+- Stop the app with `Ctrl+C`, then delete the manually created PostgreSQL container to avoid port conflicts with Docker Compose.
 
 ```bash
 docker stop learn-devops-demo-postgres
