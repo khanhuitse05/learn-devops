@@ -1,0 +1,5 @@
+aws_region          = "ap-southeast-1"
+demo_prefix         = "learn-devops-demo"
+ecr_repository_name = "learn-devops-demo-node"
+image_tag           = "demo-001"
+db_password         = "[your_db_password]"

@@ -319,7 +319,7 @@ Resources:
       DBInstanceIdentifier: !Sub ${DemoPrefix}-postgres
       DBName: !Ref DBName
       Engine: postgres
-      EngineVersion: '16.3'
+      EngineVersion: '16'
       DBInstanceClass: db.t4g.micro
       AllocatedStorage: '20'
       StorageType: gp3
