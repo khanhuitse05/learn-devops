@@ -2,7 +2,51 @@
 
 ## Objective
 
-Deploy the **entire demo stack** from steps 04-12 using a single CloudFormation template — replacing all manual Console/CLI steps with Infrastructure as Code.
+In this step, you will use a single CloudFormation template to deploy a small AWS architecture.
+
+The goal is not just "CloudFormation deploy works". The goal is to understand how to build, operate, debug, and destroy a small infrastructure stack.
+
+## Architecture
+
+```mermaid
+flowchart TD
+    Internet((Internet))
+
+    subgraph VPC
+        subgraph Public [Public subnets]
+            ALB[Application Load Balancer]
+            ECS[ECS Fargate service<br/>public egress, inbound only from ALB]
+        end
+
+        subgraph Private [Private subnets]
+            RDS[(RDS PostgreSQL)]
+            Redis[(ElastiCache Redis)]
+        end
+    end
+
+    CW[CloudWatch Logs & Metrics]
+    SSM[SSM Parameter Store<br/>DATABASE_URL]
+    ECR[ECR<br/>Docker image]
+    Grafana[Amazon Managed Grafana]
+
+    Internet -->|HTTP :80| ALB
+    ALB -->|:3000| ECS
+    ECS -->|:5432| RDS
+    ECS -->|:6379| Redis
+    Grafana -.->|reads metrics| CW
+
+    ECS -.->|writes logs| CW
+    SSM -.->|DATABASE_URL| ECS
+    ECR -.->|image pull| ECS
+```
+
+Why ECS is in public subnets for this lab:
+
+- It keeps the lab cheaper and easier.
+- ECS can pull images from ECR and write logs without NAT Gateway or VPC endpoints.
+- Inbound app traffic is still restricted to the ALB security group.
+
+Production improvement later: move ECS to private subnets and add NAT Gateway or VPC endpoints for ECR, CloudWatch Logs, and S3.
 
 ## Prerequisites
 
@@ -10,44 +54,6 @@ Deploy the **entire demo stack** from steps 04-12 using a single CloudFormation 
 - Completed the manual steps 04-12 at least once to understand each resource.
 - Cleaned up any existing `learn-devops-demo-*` resources from previous manual runs (use [step 13](13-cleanup-cost-control.md)).
 - ECR image `learn-devops-demo-node:demo-001` already pushed (from step 06) — or push it before deploying.
-
-## What This Template Creates
-
-```
-VPC (10.0.0.0/16)
-├── 2 Public Subnets  (10.0.1.0/24, 10.0.2.0/24)
-├── 2 Private Subnets (10.0.11.0/24, 10.0.12.0/24)
-├── Internet Gateway
-├── Public Route Table (0.0.0.0/0 → IGW)
-│
-├── Security Groups
-│   ├── ALB-SG   (port 80 from 0.0.0.0/0)
-│   ├── ECS-SG   (port 3000 from ALB-SG)
-│   ├── RDS-SG   (port 5432 from ECS-SG)
-│   └── Redis-SG (port 6379 from ECS-SG)
-│
-├── RDS PostgreSQL (db.t4g.micro, private subnets)
-├── DB Subnet Group
-│
-├── ElastiCache Redis Serverless (private subnets)
-├── Cache Subnet Group
-│
-├── ECR Repository
-├── ECS Cluster (Fargate)
-├── ECS Task Definition + Execution Role + Task Role
-├── ECS Service (desired count: 1, private subnets)
-│
-├── ALB (public subnets)
-├── Target Group (port 3000, /health)
-├── ALB Listener (HTTP:80 → Target Group)
-│
-├── SSM Parameter (/learn-devops-demo/db-url)
-├── CloudWatch Log Group (/ecs/learn-devops-demo-node)
-├── CloudWatch Alarm (CPU > 80%)
-├── CloudWatch Dashboard
-│
-└── Amazon Managed Grafana Workspace
-```
 
 ## Estimated cost
 
@@ -63,6 +69,24 @@ VPC (10.0.0.0/16)
 | **Total** | **~$2.50/day** |
 
 > ⚠️ **Delete the stack when done!** Run `aws cloudformation delete-stack` or use [step 13](13-cleanup-cost-control.md).
+
+## CloudFormation Folder
+
+From the repo root:
+
+```bash
+mkdir -p cloudformation
+cd cloudformation
+```
+
+Expected structure:
+
+```text
+cloudformation/
+├── README.md
+├── RUNBOOK.md
+└── demo-stack.yml
+```
 
 ---
 
@@ -568,11 +592,11 @@ Resources:
       NetworkConfiguration:
         AwsvpcConfiguration:
           Subnets:
-            - !Ref PrivateSubnetA
-            - !Ref PrivateSubnetB
+            - !Ref PublicSubnetA
+            - !Ref PublicSubnetB
           SecurityGroups:
             - !Ref EcsSecurityGroup
-          AssignPublicIp: DISABLED
+          AssignPublicIp: ENABLED
       LoadBalancers:
         - ContainerName: app
           ContainerPort: !Ref AppPort
@@ -874,28 +898,9 @@ aws cloudformation describe-stacks \
 |---------|-------------|-----|
 | Stack rollback during RDS | Password too simple | Use 8+ chars, mix case + numbers |
 | ECS service fails to create | ECR image `demo-001` doesn't exist | Push the image first (step 06) |
-| ECS tasks stuck PROVISIONING | No NAT Gateway + no VPC endpoints | Tasks need ECR pull access. Either add VPC endpoints (ecr.dkr, ecr.api, logs, s3) or use public subnets with `AssignPublicIp: ENABLED` |
 | Grafana workspace fails | Missing IAM Identity Center org | Skip Grafana by removing the resource from template |
 | Target unhealthy | Task still starting or wrong port | Wait 2-3 min after stack creation, check CloudWatch Logs |
 | DELETE_FAILED on VPC | ENIs still attached | Wait longer, then retry. Check for lingering ALB/ECS network interfaces |
-
-### Note: VPC Endpoints for Private Subnets
-
-Since this template places ECS tasks in **private subnets without NAT Gateway**, you MUST add VPC endpoints if tasks need to pull images from ECR. This is an advanced topic — for learning, the easiest approach is to modify the ECS Service to use:
-
-```yaml
-AssignPublicIp: ENABLED
-```
-
-And move ECS tasks to public subnets. The template above uses private subnets — add VPC endpoints if needed:
-
-```bash
-# These are NOT in the template — add manually via Console or CLI if needed
-# - com.amazonaws.REGION.ecr.dkr
-# - com.amazonaws.REGION.ecr.api
-# - com.amazonaws.REGION.logs
-# - com.amazonaws.REGION.s3    (gateway type)
-```
 
 ---
 
