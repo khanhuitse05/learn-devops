@@ -1,0 +1,98 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Root Stack - Connects all nested stacks together
+
+Parameters:
+  DemoPrefix:
+    Type: String
+    Default: learn-devops-demo
+  DBUsername:
+    Type: String
+    Default: devops_demo
+  DBPassword:
+    Type: String
+    Default: "DevOpsDemo123!"
+    NoEcho: true
+    MinLength: 8
+  DBName:
+    Type: String
+    Default: devops_demo
+  AppPort:
+    Type: Number
+    Default: 3000
+  ImageTag:
+    Type: String
+    Default: demo-001
+  ContainerCpu:
+    Type: Number
+    Default: 256
+  ContainerMemory:
+    Type: Number
+    Default: 512
+  DesiredCount:
+    Type: Number
+    Default: 0
+  LogRetentionDays:
+    Type: Number
+    Default: 3
+
+Resources:
+  NetworkStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: ./01-network.yml
+      Parameters:
+        DemoPrefix: !Ref DemoPrefix
+        AppPort: !Ref AppPort
+
+  DatabaseStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: ./02-database.yml
+      Parameters:
+        DemoPrefix: !Ref DemoPrefix
+        DBUsername: !Ref DBUsername
+        DBPassword: !Ref DBPassword
+        DBName: !Ref DBName
+        PrivateSubnetIds: !GetAtt NetworkStack.Outputs.PrivateSubnetIds
+        RdsSecurityGroupId: !GetAtt NetworkStack.Outputs.RdsSecurityGroupId
+        RedisSecurityGroupId: !GetAtt NetworkStack.Outputs.RedisSecurityGroupId
+
+  ComputeStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: ./03-compute.yml
+      Parameters:
+        DemoPrefix: !Ref DemoPrefix
+        AppPort: !Ref AppPort
+        ImageTag: !Ref ImageTag
+        ContainerCpu: !Ref ContainerCpu
+        ContainerMemory: !Ref ContainerMemory
+        DesiredCount: !Ref DesiredCount
+        LogRetentionDays: !Ref LogRetentionDays
+        DBUsername: !Ref DBUsername
+        DBPassword: !Ref DBPassword
+        DBName: !Ref DBName
+        RdsEndpointAddress: !GetAtt DatabaseStack.Outputs.RdsEndpointAddress
+        RdsEndpointPort: !GetAtt DatabaseStack.Outputs.RdsEndpointPort
+        VpcId: !GetAtt NetworkStack.Outputs.VpcId
+        PublicSubnetIds: !GetAtt NetworkStack.Outputs.PublicSubnetIds
+        AlbSecurityGroupId: !GetAtt NetworkStack.Outputs.AlbSecurityGroupId
+        EcsSecurityGroupId: !GetAtt NetworkStack.Outputs.EcsSecurityGroupId
+
+  ObservabilityStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: ./04-observability.yml
+      Parameters:
+        DemoPrefix: !Ref DemoPrefix
+        EcsClusterName: !GetAtt ComputeStack.Outputs.EcsClusterName
+        EcsServiceName: !GetAtt ComputeStack.Outputs.EcsServiceName
+        ALBFullName: !GetAtt ComputeStack.Outputs.ApplicationLoadBalancerFullName
+
+Outputs:
+  AlbDnsName:
+    Description: ALB public DNS name
+    Value: !GetAtt ComputeStack.Outputs.AlbDnsName
+  GrafanaEndpoint:
+    Description: Grafana URL
+    Value: !GetAtt ObservabilityStack.Outputs.GrafanaEndpoint

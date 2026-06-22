@@ -1,0 +1,155 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Root Stack - Connects all nested stacks together
+Parameters:
+  DemoPrefix:
+    Type: String
+    Default: learn-devops-demo
+  DBUsername:
+    Type: String
+    Default: devops_demo
+  DBPassword:
+    Type: String
+    Default: DevOpsDemo123!
+    NoEcho: true
+    MinLength: 8
+  DBName:
+    Type: String
+    Default: devops_demo
+  AppPort:
+    Type: Number
+    Default: 3000
+  ImageTag:
+    Type: String
+    Default: demo-001
+  ContainerCpu:
+    Type: Number
+    Default: 256
+  ContainerMemory:
+    Type: Number
+    Default: 512
+  DesiredCount:
+    Type: Number
+    Default: 0
+  LogRetentionDays:
+    Type: Number
+    Default: 3
+Resources:
+  NetworkStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: 
+        https://s3.ap-southeast-1.amazonaws.com/learn-devops-cfn-artifacts-12345/7b74a48108cfd55c9032a05210a2a735.template
+      Parameters:
+        DemoPrefix:
+          Ref: DemoPrefix
+        AppPort:
+          Ref: AppPort
+  DatabaseStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: 
+        https://s3.ap-southeast-1.amazonaws.com/learn-devops-cfn-artifacts-12345/36b961f16bd051ed88dc2d0ef1d46f2d.template
+      Parameters:
+        DemoPrefix:
+          Ref: DemoPrefix
+        DBUsername:
+          Ref: DBUsername
+        DBPassword:
+          Ref: DBPassword
+        DBName:
+          Ref: DBName
+        PrivateSubnetIds:
+          Fn::GetAtt:
+          - NetworkStack
+          - Outputs.PrivateSubnetIds
+        RdsSecurityGroupId:
+          Fn::GetAtt:
+          - NetworkStack
+          - Outputs.RdsSecurityGroupId
+        RedisSecurityGroupId:
+          Fn::GetAtt:
+          - NetworkStack
+          - Outputs.RedisSecurityGroupId
+  ComputeStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: 
+        https://s3.ap-southeast-1.amazonaws.com/learn-devops-cfn-artifacts-12345/b43e60567194b03c33123d928b316bbf.template
+      Parameters:
+        DemoPrefix:
+          Ref: DemoPrefix
+        AppPort:
+          Ref: AppPort
+        ImageTag:
+          Ref: ImageTag
+        ContainerCpu:
+          Ref: ContainerCpu
+        ContainerMemory:
+          Ref: ContainerMemory
+        DesiredCount:
+          Ref: DesiredCount
+        LogRetentionDays:
+          Ref: LogRetentionDays
+        DBUsername:
+          Ref: DBUsername
+        DBPassword:
+          Ref: DBPassword
+        DBName:
+          Ref: DBName
+        RdsEndpointAddress:
+          Fn::GetAtt:
+          - DatabaseStack
+          - Outputs.RdsEndpointAddress
+        RdsEndpointPort:
+          Fn::GetAtt:
+          - DatabaseStack
+          - Outputs.RdsEndpointPort
+        VpcId:
+          Fn::GetAtt:
+          - NetworkStack
+          - Outputs.VpcId
+        PublicSubnetIds:
+          Fn::GetAtt:
+          - NetworkStack
+          - Outputs.PublicSubnetIds
+        AlbSecurityGroupId:
+          Fn::GetAtt:
+          - NetworkStack
+          - Outputs.AlbSecurityGroupId
+        EcsSecurityGroupId:
+          Fn::GetAtt:
+          - NetworkStack
+          - Outputs.EcsSecurityGroupId
+  ObservabilityStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: 
+        https://s3.ap-southeast-1.amazonaws.com/learn-devops-cfn-artifacts-12345/e55345a765a1504c41997ee7795769f4.template
+      Parameters:
+        DemoPrefix:
+          Ref: DemoPrefix
+        EcsClusterName:
+          Fn::GetAtt:
+          - ComputeStack
+          - Outputs.EcsClusterName
+        EcsServiceName:
+          Fn::GetAtt:
+          - ComputeStack
+          - Outputs.EcsServiceName
+        ALBFullName:
+          Fn::GetAtt:
+          - ComputeStack
+          - Outputs.ApplicationLoadBalancerFullName
+Outputs:
+  AlbDnsName:
+    Description: ALB public DNS name
+    Value:
+      Fn::GetAtt:
+      - ComputeStack
+      - Outputs.AlbDnsName
+  GrafanaEndpoint:
+    Description: Grafana URL
+    Value:
+      Fn::GetAtt:
+      - ObservabilityStack
+      - Outputs.GrafanaEndpoint

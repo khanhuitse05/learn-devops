@@ -1,0 +1,82 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Database Stack - RDS, ElastiCache
+
+Parameters:
+  DemoPrefix:
+    Type: String
+  DBUsername:
+    Type: String
+  DBPassword:
+    Type: String
+    NoEcho: true
+  DBName:
+    Type: String
+  PrivateSubnetIds:
+    Type: CommaDelimitedList
+  RdsSecurityGroupId:
+    Type: String
+  RedisSecurityGroupId:
+    Type: String
+
+Resources:
+  DbSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupName: !Sub "${DemoPrefix}-db-subnet"
+      DBSubnetGroupDescription: RDS subnet group for private subnets
+      SubnetIds: !Ref PrivateSubnetIds
+      Tags:
+        - Key: Name
+          Value: !Sub "${DemoPrefix}-db-subnet"
+
+  RdsInstance:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      DBInstanceIdentifier: !Sub "${DemoPrefix}-postgres"
+      DBName: !Ref DBName
+      Engine: postgres
+      EngineVersion: "16"
+      DBInstanceClass: db.t4g.micro
+      AllocatedStorage: "20"
+      StorageType: gp3
+      MasterUsername: !Ref DBUsername
+      MasterUserPassword: !Ref DBPassword
+      DBSubnetGroupName: !Ref DbSubnetGroup
+      VPCSecurityGroups:
+        - !Ref RdsSecurityGroupId
+      PubliclyAccessible: false
+      BackupRetentionPeriod: 0
+      DeletionProtection: false
+      Tags:
+        - Key: Name
+          Value: !Sub "${DemoPrefix}-postgres"
+
+  CacheSubnetGroup:
+    Type: AWS::ElastiCache::SubnetGroup
+    Properties:
+      CacheSubnetGroupName: !Sub "${DemoPrefix}-redis-subnet"
+      Description: Redis subnet group for private subnets
+      SubnetIds: !Ref PrivateSubnetIds
+      Tags:
+        - Key: Name
+          Value: !Sub "${DemoPrefix}-redis-subnet"
+
+  RedisServerlessCache:
+    Type: AWS::ElastiCache::ServerlessCache
+    Properties:
+      ServerlessCacheName: !Sub "${DemoPrefix}-redis"
+      Engine: redis
+      SecurityGroupIds:
+        - !Ref RedisSecurityGroupId
+      SubnetIds: !Ref PrivateSubnetIds
+      Tags:
+        - Key: Name
+          Value: !Sub "${DemoPrefix}-redis"
+
+Outputs:
+  RdsEndpointAddress:
+    Value: !GetAtt RdsInstance.Endpoint.Address
+  RdsEndpointPort:
+    Value: !GetAtt RdsInstance.Endpoint.Port
+  RedisEndpointAddress:
+    Value: !GetAtt RedisServerlessCache.Endpoint.Address

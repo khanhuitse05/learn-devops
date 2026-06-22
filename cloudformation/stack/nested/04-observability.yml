@@ -1,0 +1,110 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Observability Stack - Dashboard, Alarms, Grafana
+
+Parameters:
+  DemoPrefix:
+    Type: String
+  EcsClusterName:
+    Type: String
+  EcsServiceName:
+    Type: String
+  ALBFullName:
+    Type: String
+
+Resources:
+  CpuAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub "${DemoPrefix}-ecs-cpu-high"
+      AlarmDescription: Alert when ECS CPU exceeds 80%
+      Namespace: AWS/ECS
+      MetricName: CPUUtilization
+      Dimensions:
+        - Name: ClusterName
+          Value: !Ref EcsClusterName
+        - Name: ServiceName
+          Value: !Ref EcsServiceName
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 80
+      ComparisonOperator: GreaterThanThreshold
+      Tags:
+        - Key: Name
+          Value: !Sub "${DemoPrefix}-ecs-cpu-alarm"
+
+  DemoDashboard:
+    Type: AWS::CloudWatch::Dashboard
+    Properties:
+      DashboardName: !Sub "${DemoPrefix}-dashboard"
+      DashboardBody: !Sub
+        - |
+          {
+            "widgets": [
+              {
+                "type": "metric",
+                "x": 0, "y": 0, "width": 12, "height": 6,
+                "properties": {
+                  "metrics": [
+                    ["AWS/ECS", "CPUUtilization", "ClusterName", "${EcsCluster}", "ServiceName", "${EcsService}"]
+                  ],
+                  "view": "timeSeries",
+                  "stacked": false,
+                  "region": "${AWS::Region}",
+                  "title": "ECS CPU Utilization",
+                  "period": 300
+                }
+              },
+              {
+                "type": "metric",
+                "x": 0, "y": 6, "width": 12, "height": 6,
+                "properties": {
+                  "metrics": [
+                    ["AWS/ApplicationELB", "TargetResponseTime", "LoadBalancer", "${ALB}"]
+                  ],
+                  "view": "timeSeries",
+                  "stacked": false,
+                  "region": "${AWS::Region}",
+                  "title": "ALB Target Response Time",
+                  "period": 300
+                }
+              }
+            ]
+          }
+        - ALB: !Ref ALBFullName
+          EcsCluster: !Ref EcsClusterName
+          EcsService: !Ref EcsServiceName
+
+  GrafanaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${DemoPrefix}-grafana-role"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: grafana.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonGrafanaCloudWatchAccess
+      Tags:
+        - Key: Name
+          Value: !Sub "${DemoPrefix}-grafana-role"
+
+  GrafanaWorkspace:
+    Type: AWS::Grafana::Workspace
+    Properties:
+      AccountAccessType: CURRENT_ACCOUNT
+      AuthenticationProviders:
+        - AWS_SSO
+      DataSources:
+        - CLOUDWATCH
+      Description: Demo Grafana workspace for learn-devops
+      PermissionType: CUSTOMER_MANAGED
+      RoleArn: !GetAtt GrafanaRole.Arn
+      Name: !Sub "${DemoPrefix}-grafana"
+
+Outputs:
+  GrafanaEndpoint:
+    Value: !GetAtt GrafanaWorkspace.Endpoint
