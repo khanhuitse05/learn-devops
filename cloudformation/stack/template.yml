@@ -1,0 +1,752 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: "01-template"
+
+Parameters:
+  DemoPrefix:
+    Type: String
+    Default: learn-devops-demo
+    Description: Prefix for all resource names
+
+  DBUsername:
+    Type: String
+    Default: devops_demo
+    Description: RDS master username
+
+  DBPassword:
+    Type: String
+    Default: "DevOpsDemo123!"
+    NoEcho: true
+    MinLength: 8
+    Description: RDS master password (min 8 characters)
+
+  DBName:
+    Type: String
+    Default: devops_demo
+    Description: Initial database name
+
+  AppPort:
+    Type: Number
+    Default: 3000
+    Description: Container application port
+
+  ImageTag:
+    Type: String
+    Default: demo-001
+    Description: ECR image tag to deploy
+
+  ContainerCpu:
+    Description: CPU units for Fargate task (256 - 0.25 vCPU)
+    Type: Number
+    Default: 256
+
+  ContainerMemory:
+    Description: Memory for Fargate task (in Mib)
+    Type: Number
+    Default: 512
+
+  DesiredCount:
+    Description: Number of ECS tasks to run
+    Type: Number
+    Default: 0
+
+  LogRetentionDays:
+    Description: CloudWatch log retention in days
+    Type: Number
+    Default: 3
+
+Resources:
+  # VPC + Internet Gateway
+  DemoVpc:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value:
+            Fn::Sub: "${DemoPrefix}-vpc"
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value:
+            Fn::Sub: "${DemoPrefix}-igw"
+
+  VpcGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId:
+        Ref: DemoVpc
+      InternetGatewayId:
+        Ref: InternetGateway
+
+  # Public subnets
+  PublicSubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: DemoVpc
+      AvailabilityZone:
+        Fn::Select:
+          - 0
+          - Fn::GetAZs: ""
+      MapPublicIpOnLaunch: true
+      CidrBlock: 10.0.1.0/24
+      Tags:
+        - Key: Name
+          Value:
+            Fn::Sub: "${DemoPrefix}-public-a"
+
+  PublicSubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: DemoVpc
+      CidrBlock: 10.0.2.0/24
+      AvailabilityZone:
+        Fn::Select:
+          - 1
+          - Fn::GetAZs: ""
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value:
+            Fn::Sub: "${DemoPrefix}-public-b"
+
+  # Private Subnets
+  PrivateSubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: DemoVpc
+      CidrBlock: 10.0.11.0/24
+      AvailabilityZone:
+        Fn::Select:
+          - 0
+          - Fn::GetAZs: ""
+      Tags:
+        - Key: Name
+          Value:
+            Fn::Sub: "${DemoPrefix}-private-a"
+
+  PrivateSubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: DemoVpc
+      CidrBlock: 10.0.12.0/24
+      AvailabilityZone:
+        Fn::Select:
+          - 1
+          - Fn::GetAZs: ""
+      Tags:
+        - Key: Name
+          Value:
+            Fn::Sub: "${DemoPrefix}-private-b"
+
+  # Route Tables
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:
+        Ref: DemoVpc
+      Tags:
+        - Key: Name
+          Value:
+            Fn::Sub: "${DemoPrefix}-public-rt"
+  PublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: VpcGatewayAttachment
+    Properties:
+      RouteTableId:
+        Ref: PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId:
+        Ref: InternetGateway
+
+  PublicSubnetARouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId:
+        Ref: PublicSubnetA
+      RouteTableId:
+        Ref: PublicRouteTable
+
+  PublicSubnetBRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId:
+        Ref: PublicSubnetB
+      RouteTableId:
+        Ref: PublicRouteTable
+
+  # Security Groups
+  AlbSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName:
+        Fn::Sub: "${DemoPrefix}-alb-sg"
+      GroupDescription: Allow HTTP from internet to ALB
+      VpcId:
+        Ref: DemoVpc
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value:
+            Fn::Sub: "${DemoPrefix}-alb-sg"
+
+  EcsSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName:
+        Fn::Sub: "${DemoPrefix}-ecs-sg"
+      GroupDescription: Allow app traffic from ALB to ECS
+      VpcId:
+        Ref: DemoVpc
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort:
+            Ref: AppPort
+          ToPort:
+            Ref: AppPort
+          SourceSecurityGroupId:
+            Ref: AlbSecurityGroup
+      Tags:
+        - Key: Name
+          Value:
+            Fn::Sub: "${DemoPrefix}-ecs-sg"
+
+  RdsSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName:
+        Fn::Sub: "${DemoPrefix}-rds-sg"
+      GroupDescription: Allow PostgreSQL from ECS to RDS
+      VpcId:
+        Ref: DemoVpc
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          SourceSecurityGroupId:
+            Ref: EcsSecurityGroup
+      Tags:
+        - Key: Name
+          Value:
+            Fn::Sub: "${DemoPrefix}-rds-sg"
+
+  RedisSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName:
+        Fn::Sub: "${DemoPrefix}-redis-sg"
+      GroupDescription: Allow Redis from ECS
+      VpcId:
+        Ref: DemoVpc
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 6379
+          ToPort: 6379
+          SourceSecurityGroupId:
+            Ref: EcsSecurityGroup
+      Tags:
+        - Key: Name
+          Value:
+            Fn::Sub: "${DemoPrefix}-redis-sg"
+  # RDS PostgreSQL
+  DbSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupName:
+        Fn::Sub: "${DemoPrefix}-db-subnet"
+      DBSubnetGroupDescription: RDS subnet group for private subnets
+      SubnetIds:
+        - Ref: PrivateSubnetA
+        - Ref: PrivateSubnetB
+      Tags:
+        - Key: Name
+          Value:
+            Fn::Sub: "${DemoPrefix}-db-subnet"
+  RdsInstance:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      DBInstanceIdentifier:
+        Fn::Sub: "${DemoPrefix}-postgres"
+      DBName:
+        Ref: DBName
+      Engine: postgres
+      EngineVersion: "16"
+      DBInstanceClass: db.t4g.micro
+      AllocatedStorage: "20"
+      StorageType: gp3
+      MasterUsername:
+        Ref: DBUsername
+      MasterUserPassword:
+        Ref: DBPassword
+      DBSubnetGroupName:
+        Ref: DbSubnetGroup
+      VPCSecurityGroups:
+        - Ref: RdsSecurityGroup
+      PubliclyAccessible: false
+      BackupRetentionPeriod: 0
+      DeletionProtection: false
+      Tags:
+        - Key: Name
+          Value:
+            Fn::Sub: "${DemoPrefix}-postgres"
+
+  # ElastiCache Redis (Serverless)
+  CacheSubnetGroup:
+    Type: AWS::ElastiCache::SubnetGroup
+    Properties:
+      CacheSubnetGroupName:
+        Fn::Sub: "${DemoPrefix}-redis-subnet"
+      Description: Redis subnet group for private subnets
+      SubnetIds:
+        - Ref: PrivateSubnetA
+        - Ref: PrivateSubnetB
+      Tags:
+        - Key: Name
+          Value:
+            Fn::Sub: "${DemoPrefix}-redis-subnet"
+
+  RedisServerlessCache:
+    Type: AWS::ElastiCache::ServerlessCache
+    Properties:
+      ServerlessCacheName:
+        Fn::Sub: "${DemoPrefix}-redis"
+      Engine: redis
+      SecurityGroupIds:
+        - Ref: RedisSecurityGroup
+      SubnetIds:
+        - Ref: PrivateSubnetA
+        - Ref: PrivateSubnetB
+      Tags:
+        - Key: Name
+          Value:
+            Fn::Sub: "${DemoPrefix}-redis"
+
+  # ECR Repository
+  EcrRepository:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName:
+        Fn::Sub: "${DemoPrefix}-node"
+      ImageTagMutability: MUTABLE
+      Tags:
+        - Key: Name
+          Value:
+            Fn::Sub: "${DemoPrefix}-node"
+
+  # SSM Parameter for DB URL
+  DbUrlParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name:
+        Fn::Sub: "/${DemoPrefix}/db-url"
+      Type: String
+      Value:
+        Fn::Sub: "postgres://${DBUsername}:${DBPassword}@${RdsInstance.Endpoint.Address}:${RdsInstance.Endpoint.Port}/${DBName}?sslmode=require"
+      Tags:
+        Project:
+          Ref: DemoPrefix
+
+  # IAM Roles
+  EcsTaskExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName:
+        Fn::Sub: "${DemoPrefix}-ecs-execution-role"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+      Policies:
+        - PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ssm:GetParameter
+                  - ssm:GetParameters
+                Resource:
+                  Fn::Sub: "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${DemoPrefix}/db-url"
+          PolicyName: ReadDbUrlSsmParameter
+      Tags:
+        - Key: Name
+          Value:
+            Fn::Sub: "${DemoPrefix}-ecs-execution-role"
+  EcsTaskRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName:
+        Fn::Sub: "${DemoPrefix}-ecs-task-role"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      Tags:
+        - Key: Name
+          Value:
+            Fn::Sub: "${DemoPrefix}-ecs-task-role"
+  # ALB
+  ApplicationLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name:
+        Fn::Sub: "${DemoPrefix}-alb"
+      Scheme: internet-facing
+      Type: application
+      IpAddressType: ipv4
+      Subnets:
+        - Ref: PublicSubnetA
+        - Ref: PublicSubnetB
+      SecurityGroups:
+        - Ref: AlbSecurityGroup
+      Tags:
+        - Key: Name
+          Value:
+            Fn::Sub: "${DemoPrefix}-alb"
+
+  AlbListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn:
+        Ref: ApplicationLoadBalancer
+      Port: 80
+      Protocol: HTTP
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn:
+            Ref: EcsTargetGroup
+
+  EcsTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name:
+        Fn::Sub: "${DemoPrefix}-node-tg"
+      Port:
+        Ref: AppPort
+      Protocol: HTTP
+      TargetType: ip
+      VpcId:
+        Ref: DemoVpc
+      HealthCheckPath: /health
+      HealthCheckProtocol: HTTP
+      HealthCheckIntervalSeconds: 30
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 2
+      UnhealthyThresholdCount: 3
+      Tags:
+        - Key: Name
+          Value:
+            Fn::Sub: "${DemoPrefix}-node-tg"
+
+  # ECS Cluster & Service
+  EcsCluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName:
+        Fn::Sub: "${DemoPrefix}-cluster"
+      Tags:
+        - Key: Name
+          Value:
+            Fn::Sub: "${DemoPrefix}-cluster"
+
+  EcsTaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family:
+        Fn::Sub: "${DemoPrefix}-node"
+      Cpu:
+        Ref: ContainerCpu
+      Memory:
+        Ref: ContainerMemory
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      RuntimePlatform:
+        CpuArchitecture: ARM64
+        OperatingSystemFamily: LINUX
+      ExecutionRoleArn:
+        Ref: EcsTaskExecutionRole
+      TaskRoleArn:
+        Ref: EcsTaskRole
+      ContainerDefinitions:
+        - Name: app
+          Image:
+            Fn::Sub: "${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${DemoPrefix}-node:${ImageTag}"
+          Essential: true
+          PortMappings:
+            - ContainerPort:
+                Ref: AppPort
+              Protocol: tcp
+          Environment:
+            - Name: PORT
+              Value:
+                Ref: AppPort
+            - Name: HOST
+              Value: 0.0.0.0
+          Secrets:
+            - Name: DATABASE_URL
+              ValueFrom:
+                Fn::Sub: "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${DemoPrefix}/db-url"
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Sub "/ecs${DemoPrefix}-node"
+              awslogs-region: !Sub "${AWS::Region}"
+              awslogs-stream-prefix: ecs
+      Tags:
+        - Key: Name
+          Value:
+            Fn::Sub: "${DemoPrefix}-node"
+
+  EcsService:
+    Type: AWS::ECS::Service
+    DependsOn:
+      - AlbListener
+      - RdsInstance
+    Properties:
+      ServiceName:
+        Fn::Sub: "${DemoPrefix}-node-service"
+      Cluster:
+        Ref: EcsCluster
+      TaskDefinition:
+        Ref: EcsTaskDefinition
+      DesiredCount:
+        Ref: DesiredCount
+      LaunchType: FARGATE
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          Subnets:
+            - Ref: PublicSubnetA
+            - Ref: PublicSubnetB
+          SecurityGroups:
+            - Ref: EcsSecurityGroup
+          AssignPublicIp: ENABLED
+      LoadBalancers:
+        - ContainerName: app
+          ContainerPort:
+            Ref: AppPort
+          TargetGroupArn:
+            Ref: EcsTargetGroup
+      Tags:
+        - Key: Name
+          Value:
+            Fn::Sub: "${DemoPrefix}-node-service"
+  EcsLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName:
+        Fn::Sub: "/ecs${DemoPrefix}-node"
+      RetentionInDays:
+        Ref: LogRetentionDays
+      Tags:
+        - Key: Name
+          Value:
+            Fn::Sub: "${DemoPrefix}-ecs-logs"
+
+  CpuAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName:
+        Fn::Sub: "${DemoPrefix}-ecs-cpu-high"
+      AlarmDescription: Alert when ECS CPU exceeds 80%
+      Namespace: AWS/ECS
+      MetricName: CPUUtilization
+      Dimensions:
+        - Name: ClusterName
+          Value:
+            Ref: EcsCluster
+        - Name: ServiceName
+          Value:
+            Fn::GetAtt:
+              - EcsService
+              - Name
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 80
+      ComparisonOperator: GreaterThanThreshold
+      Tags:
+        - Key: Name
+          Value:
+            Fn::Sub: "${DemoPrefix}-ecs-cpu-alarm"
+  # CloudWatch Dashboard
+  DemoDashboard:
+    Type: AWS::CloudWatch::Dashboard
+    Properties:
+      DashboardName:
+        Fn::Sub: "${DemoPrefix}-dashboard"
+      DashboardBody:
+        Fn::Sub:
+          - |
+            {
+              "widgets": [
+                {
+                  "type": "metric",
+                  "x": 0, "y": 0, "width": 12, "height": 6,
+                  "properties": {
+                    "metrics": [
+                      ["AWS/ECS", "CPUUtilization", "ClusterName", "${EcsCluster}", "ServiceName", "${EcsServiceName}"]
+                    ],
+                    "view": "timeSeries",
+                    "stacked": false,
+                    "region": "${AWS::Region}",
+                    "title": "ECS CPU Utilization",
+                    "period": 300
+                  }
+                },
+                {
+                  "type": "metric",
+                  "x": 12, "y": 0, "width": 12, "height": 6,
+                  "properties": {
+                    "metrics": [
+                      ["AWS/ECS", "MemoryUtilization", "ClusterName", "${EcsCluster}", "ServiceName", "${EcsServiceName}"]
+                    ],
+                    "view": "timeSeries",
+                    "stacked": false,
+                    "region": "${AWS::Region}",
+                    "title": "ECS Memory Utilization",
+                    "period": 300
+                  }
+                },
+                {
+                  "type": "metric",
+                  "x": 0, "y": 6, "width": 12, "height": 6,
+                  "properties": {
+                    "metrics": [
+                      ["AWS/ApplicationELB", "TargetResponseTime", "LoadBalancer", "${ALBFullName}"]
+                    ],
+                    "view": "timeSeries",
+                    "stacked": false,
+                    "region": "${AWS::Region}",
+                    "title": "ALB Target Response Time",
+                    "period": 300
+                  }
+                },
+                {
+                  "type": "metric",
+                  "x": 12, "y": 6, "width": 12, "height": 6,
+                  "properties": {
+                    "metrics": [
+                      ["AWS/ApplicationELB", "HTTPCode_Target_5XX_Count", "LoadBalancer", "${ALBFullName}"]
+                    ],
+                    "view": "timeSeries",
+                    "stacked": false,
+                    "region": "${AWS::Region}",
+                    "title": "ALB 5XX Errors",
+                    "period": 300
+                  }
+                }
+              ]
+            }
+          - ALBFullName: !GetAtt ApplicationLoadBalancer.LoadBalancerFullName
+            EcsCluster: !Ref EcsCluster
+            EcsServiceName: !GetAtt EcsService.Name
+  # Amazon Managed Grafana Workspace
+  GrafanaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName:
+        Fn::Sub: "${DemoPrefix}-grafana-role"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: grafana.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonGrafanaCloudWatchAccess
+      Tags:
+        - Key: Name
+          Value:
+            Fn::Sub: "${DemoPrefix}-grafana-role"
+
+  GrafanaWorkspace:
+    Type: AWS::Grafana::Workspace
+    Properties:
+      AccountAccessType: CURRENT_ACCOUNT
+      AuthenticationProviders:
+        - AWS_SSO
+      DataSources:
+        - CLOUDWATCH
+      Description: Demo Grafana workspace for learn-devops
+      PermissionType: CUSTOMER_MANAGED
+      RoleArn:
+        Fn::GetAtt:
+          - GrafanaRole
+          - Arn
+      Name:
+        Fn::Sub: "${DemoPrefix}-grafana"
+
+Outputs:
+  VpcId:
+    Description: VPC ID
+    Value:
+      Ref: DemoVpc
+    Export:
+      Name:
+        Fn::Sub: "${DemoPrefix}-vpc-id"
+  RdsEndpoint:
+    Description: RDS PostgreSql endpoint
+    Value:
+      Fn::GetAtt:
+        - RdsInstance
+        - Endpoint.Address
+    Export:
+      Name:
+        Fn::Sub: "${DemoPrefix}-rds-endpoint"
+  RedisEndpoint:
+    Description: ElastiCache Redis endpoint
+    Value:
+      Fn::GetAtt:
+        - RedisServerlessCache
+        - Endpoint.Address
+    Export:
+      Name:
+        Fn::Sub: "${DemoPrefix}-redis-endpoint"
+
+  AlbDnsName:
+    Description: ALB public DNS name
+    Value:
+      Fn::GetAtt:
+        - ApplicationLoadBalancer
+        - DNSName
+    Export:
+      Name:
+        Fn::Sub: "${DemoPrefix}-alb-dns"
+
+  EcrRepositoryUri:
+    Description: ECR repository URI
+    Value:
+      Fn::Sub: "${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${DemoPrefix}-node"
+    Export:
+      Name:
+        Fn::Sub: "${DemoPrefix}-ecr-uri"
+
+  GrafanaEndpoint:
+    Description: Grafana workspace URL
+    Value:
+      Fn::GetAtt:
+        - GrafanaWorkspace
+        - Endpoint
+    Export:
+      Name:
+        Fn::Sub: "${DemoPrefix}-grafana-endpoint"
