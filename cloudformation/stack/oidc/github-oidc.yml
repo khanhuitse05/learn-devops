@@ -1,0 +1,73 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'CloudFormation template to configure GitHub OIDC Provider and an IAM Role for GitHub Actions.'
+
+Parameters:
+  GitHubOrg:
+    Type: String
+    Description: GitHub Organization or Username
+    Default: 'khanhuitse05'
+  
+  GitHubRepo:
+    Type: String
+    Description: GitHub Repository name
+    Default: 'learn-devops'
+    
+  OIDCProviderArn:
+    Type: String
+    Description: 'Arn for the GitHub OIDC Provider. (Optional: Leave blank to create one)'
+    Default: ''
+
+Conditions:
+  CreateOIDCProvider: !Equals [!Ref OIDCProviderArn, '']
+
+Resources:
+  # Create an OIDC Provider for GitHub Actions
+  GitHubOidcProvider:
+    Type: AWS::IAM::OIDCProvider
+    Condition: CreateOIDCProvider
+    Properties:
+      Url: https://token.actions.githubusercontent.com
+      ClientIdList:
+        - sts.amazonaws.com
+      ThumbprintList:
+        # GitHub's OIDC Thumbprint. Note: AWS IAM now supports securing OIDC without
+        # validating the thumbprint if you use certain configurations, but it is standard to include it.
+        # This is a known common thumbprint for GitHub Actions.
+        - '6938fd4d98bab03faadb97b34396831e3780aea1'
+        - '1c58a3a8518e8759bf075b76b750d4f2df264fcd'
+
+  # Create an IAM Role that trusts the GitHub OIDC Provider
+  GitHubActionsRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${GitHubOrg}-${GitHubRepo}-github-actions-role'
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Action: sts:AssumeRoleWithWebIdentity
+            Principal:
+              Federated: !If 
+                - CreateOIDCProvider
+                - !Ref GitHubOidcProvider
+                - !Ref OIDCProviderArn
+            Condition:
+              StringEquals:
+                token.actions.githubusercontent.com:aud: sts.amazonaws.com
+              StringLike:
+                token.actions.githubusercontent.com:sub: !Sub 'repo:${GitHubOrg}/${GitHubRepo}:*'
+      # Example policies to allow the GitHub Action to interact with AWS resources
+      Policies:
+        - PolicyName: GitHubActionsDemoPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:ListAllMyBuckets
+                  - ecs:ListClusters
+                Resource: '*'
+
+Outputs:
+  RoleArn:
+    Description: The ARN of the IAM Role for GitHub Actions to assume
+    Value: !GetAtt GitHubActionsRole.Arn
