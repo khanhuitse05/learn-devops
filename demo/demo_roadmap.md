@@ -42,6 +42,7 @@ aws sts get-caller-identity
 | 13 | [Cleanup And Cost Control](13-cleanup-cost-control.md) | Delete resources and stop ongoing costs |
 | 14 | [CloudFormation](14-cloudformation.md) | Full Stack with CloudFormation (IaC) |
 | 15 | [Terraform](15-terraform.md) | Full Stack with Terraform (IaC) |
+| 16 | [Ansible Setup](16-ansible-setup.md) | Learn Ansible configuration and playbooks |
 
 ## Recommended Flow
 
